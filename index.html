@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>通帳plus - 学生のためのお金管理</title>
+<meta name="theme-color" content="#16324F" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+<link rel="apple-touch-icon" href="icons/icon-180.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="通帳plus" />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    background: #E7E2D2;
+  }
+  button, input, select { font-family: inherit; }
+  button { cursor: pointer; background: none; border: none; }
+  .mincho { font-family: 'Shippori Mincho', serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  .page {
+    min-height: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 28px 12px;
+  }
+  .phone {
+    width: 420px;
+    max-width: 100%;
+    height: 800px;
+    background: #EFECE0;
+    border-radius: 30px;
+    box-shadow: 0 24px 60px rgba(22,50,79,0.28), 0 0 0 8px #16324F, 0 0 0 9px #0F2338;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  @media (max-width: 460px) {
+    .page { padding: 0; }
+    .phone { width: 100%; height: 100dvh; border-radius: 0; box-shadow: none; }
+  }
+
+  .header {
+    background: #16324F;
+    padding: calc(20px + env(safe-area-inset-top)) 20px 16px;
+    flex-shrink: 0;
+  }
+  .header-top { display: flex; align-items: baseline; justify-content: space-between; }
+  .brand { color: #F1EDDD; font-size: 19px; letter-spacing: 1px; }
+  .header-sub { color: #9FB4CC; font-size: 11.5px; }
+
+  .content { flex: 1; overflow-y: auto; }
+  .content::-webkit-scrollbar { width: 5px; }
+  .content::-webkit-scrollbar-thumb { background: #D8D3C0; border-radius: 3px; }
+  .tab-inner { padding: 18px 18px calc(96px + env(safe-area-inset-bottom)); }
+
+  .ledger-card {
+    background: #fff;
+    border: 1px solid #E5E0CF;
+    border-radius: 14px;
+    padding: 16px 18px;
+    box-shadow: 0 2px 0 #E5E0CF;
+  }
+  .ledger-label { font-size: 11px; color: #9C9788; margin-bottom: 4px; letter-spacing: 0.5px; }
+  .big-number { font-size: 30px; font-weight: 700; color: #16324F; }
+  .perf-line {
+    height: 1px;
+    background: repeating-linear-gradient(to right, #D8D3C0 0, #D8D3C0 4px, transparent 4px, transparent 9px);
+    margin: 12px 0;
+  }
+
+  .section { margin-top: 22px; }
+  .section-title { font-size: 12.5px; font-weight: 700; color: #6B6656; margin-bottom: 9px; letter-spacing: 0.5px; }
+
+  .ledger-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 4px; border-bottom: 1px dashed #DEDACB;
+    animation: fadeUp 0.25s ease;
+  }
+  .ledger-row .memo { font-size: 13.5px; color: #1F2A37; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ledger-row .meta { font-size: 11px; color: #9C9788; margin-top: 2px; }
+  .ledger-row .amt { font-size: 14px; font-weight: 700; color: #1F2A37; white-space: nowrap; }
+
+  .settle-row {
+    display: flex; align-items: center; gap: 8px;
+    background: #fff; border: 1px solid #E5E0CF; border-radius: 10px;
+    padding: 9px 12px; margin-bottom: 7px; font-size: 13px;
+  }
+  .settle-row b { font-weight: 700; }
+  .settle-amt { margin-left: auto; color: #B23A2E; font-weight: 700; }
+
+  .member-tag {
+    font-size: 11.5px; background: #F1EDDD; color: #16324F;
+    padding: 3px 9px; border-radius: 20px; font-weight: 600; display: inline-block;
+  }
+
+  .bar-track { height: 8px; background: #E5E0CF; border-radius: 5px; overflow: hidden; }
+  .bar-fill { height: 100%; background: linear-gradient(90deg,#2F9C8F,#57BBAD); border-radius: 5px; }
+
+  .empty-note {
+    font-size: 12.5px; color: #9C9788; background: #fff;
+    border: 1px dashed #DEDACB; border-radius: 10px; padding: 16px 14px;
+    text-align: center; line-height: 1.6;
+  }
+
+  .add-button {
+    width: 100%; margin-top: 14px; background: #16324F; color: #F1EDDD;
+    border-radius: 12px; padding: 12px 0; font-size: 13.5px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+
+  .form-card {
+    background: #fff; border: 1px solid #E5E0CF; border-radius: 14px;
+    padding: 18px 16px 16px; margin-top: 12px; position: relative;
+    animation: fadeUp 0.25s ease;
+  }
+  .close-btn { position: absolute; top: 10px; right: 10px; padding: 4px; }
+  .field-label { font-size: 11.5px; color: #8A8577; font-weight: 700; margin-top: 12px; margin-bottom: 5px; }
+  .input-wrap { position: relative; }
+  .yen-mark { position: absolute; left: 10px; top: 9px; font-size: 13.5px; color: #8A8577; }
+  .input {
+    width: 100%; border: 1px solid #E1DDCE; border-radius: 9px; padding: 9px 10px;
+    font-size: 13.5px; color: #1F2A37; outline: none; background: #FAF8F0;
+  }
+  .input:focus { border-color: #16324F; }
+  .input.pl26 { padding-left: 26px; }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    border: 1px solid #E1DDCE; border-radius: 20px; padding: 6px 12px;
+    font-size: 12px; font-weight: 600; background: #fff; color: #4A4638;
+  }
+  .chip.active { color: #fff; }
+
+  .submit-btn {
+    width: 100%; margin-top: 16px; background: #B23A2E; color: #fff;
+    border-radius: 10px; padding: 11px 0; font-size: 13.5px; font-weight: 700;
+  }
+  .small-add-btn {
+    background: #16324F; border-radius: 9px; width: 36px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .add-money-link { color: #2F9C8F; font-size: 12px; font-weight: 700; margin-top: 6px; }
+  .trash-btn { padding: 4px; flex-shrink: 0; }
+
+  .pay-btn {
+    font-size: 10.5px; font-weight: 700; color: #2F9C8F; border: 1px solid #2F9C8F;
+    border-radius: 20px; padding: 5px 9px; flex-shrink: 0; white-space: nowrap; background: #fff;
+  }
+  .pay-btn.paid { background: #2F9C8F; color: #fff; }
+
+  .nav {
+    display: flex; border-top: 1px solid #E1DDCE; background: #F6F3EA;
+    padding: 8px 0 calc(10px + env(safe-area-inset-bottom));
+    flex-shrink: 0;
+    position: absolute; left: 0; right: 0; bottom: 0;
+    z-index: 5;
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; position: relative;
+  }
+  .nav-btn .label { font-size: 10px; margin-top: 2px; color: #B0AA98; font-weight: 500; }
+  .nav-btn.active .label { color: #16324F; font-weight: 700; }
+  .nav-dot { position: absolute; top: -8px; width: 20px; height: 3px; border-radius: 3px; background: #16324F; }
+
+  .stamp-wrap {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  .stamp {
+    width: 92px; height: 92px; border-radius: 50%; border: 4px solid #B23A2E; color: #B23A2E;
+    display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700;
+    line-height: 1.15; text-align: center; animation: stampIn 0.9s ease forwards;
+  }
+
+  @keyframes stampIn {
+    0% { opacity: 0; transform: scale(2.4) rotate(-18deg); }
+    35% { opacity: 1; transform: scale(0.92) rotate(-14deg); }
+    55% { transform: scale(1.05) rotate(-14deg); }
+    75% { transform: scale(1) rotate(-14deg); }
+    100% { opacity: 0; transform: scale(1) rotate(-14deg); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  svg.icon { display: block; }
+
+  .onboard-screen {
+    height: 100%; width: 100%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 40px 30px;
+    text-align: center; position: relative; background: #EFECE0;
+  }
+  .onboard-skip {
+    position: absolute; top: 18px; right: 16px; font-size: 12px;
+    color: #8A8577; font-weight: 600; padding: 6px 10px;
+  }
+  .onboard-icon {
+    width: 88px; height: 88px; border-radius: 50%; background: #F1EDDD;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 22px;
+  }
+  .onboard-title { font-size: 19px; color: #16324F; font-weight: 700; margin-bottom: 10px; letter-spacing: 0.5px; }
+  .onboard-text { font-size: 13px; color: #6B6656; line-height: 1.75; max-width: 280px; }
+  .onboard-dots { display: flex; gap: 6px; margin: 26px 0 22px; }
+  .onboard-dot { width: 6px; height: 6px; border-radius: 50%; background: #D8D3C0; transition: all 0.2s ease; }
+  .onboard-dot.active { background: #16324F; width: 16px; border-radius: 4px; }
+  .onboard-later { margin-top: 14px; font-size: 12px; color: #9C9788; text-decoration: underline; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ================= アイコン (inline SVG) ================= */
+const ICONS = {
+  home: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v10a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V10"/></svg>`,
+  wallet: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><path d="M16 14h2"/></svg>`,
+  users: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 19c0-3.3 2.9-5.5 6.5-5.5s6.5 2.2 6.5 5.5"/><circle cx="17" cy="8.5" r="2.6"/><path d="M16.2 13.6c2.7.4 4.3 2.3 4.3 5.4"/></svg>`,
+  piggy: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5c-4 0-7 2.6-7 6 0 1.3.4 2.4 1.2 3.4L5 17h3l.8-1.2c.7.15 1.4.2 2.2.2 4 0 7-2.6 7-6s-3-6.4-6-6.4"/><circle cx="8.5" cy="10.5" r=".6" fill="${c}"/><path d="M19 9c1 .3 1.6 1 1.6 2s-.6 1.7-1.6 2"/><path d="M9.5 17.5V19"/></svg>`,
+  plus: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
+  x: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>`,
+  arrow: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`,
+  trash: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg>`,
+  check: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 9.5 17 19 7"/></svg>`,
+  income: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>`,
+};
+
+/* ================= チュートリアル ================= */
+const TUTORIAL_SLIDES = [
+  { icon: "home", title: "ようこそ、通帳plusへ", text: "学生のためのシンプルなお金管理アプリです。使い方を簡単にご紹介します。" },
+  { icon: "wallet", title: "支出を記録", text: "使ったお金はカテゴリを選んでサクッと記帳。今月の支出がひと目でわかります。" },
+  { icon: "income", title: "収入を記録", text: "バイト代や仕送りなど、入ってきたお金もかんたんに記録できます。" },
+  { icon: "users", title: "割り勘・立て替え", text: "友達との立て替えを記録すると、誰が誰にいくら払えばいいか自動で計算。支払いが済んだら「支払い済」を押すだけで収支に反映されます。" },
+  { icon: "piggy", title: "貯金目標", text: "欲しいものや旅行のために目標をつくって、所持金からコツコツ貯金できます。" },
+];
+function hasSeenTutorial() {
+  try { return localStorage.getItem("tsuuchoplus_onboarded") === "1"; } catch (e) { return false; }
+}
+function markTutorialSeen() {
+  try { localStorage.setItem("tsuuchoplus_onboarded", "1"); } catch (e) {}
+}
+function clearMockData() {
+  state.expenses = [];
+  state.showExpForm = false;
+  state.expForm = { amount: "", category: "食費", memo: "" };
+
+  state.incomes = [];
+  state.showIncForm = false;
+  state.incForm = { amount: "", category: "バイト代", memo: "" };
+
+  state.members = ["自分"];
+  state.splitExpenses = [];
+  state.showSplitForm = false;
+  state.splitForm = { memo: "", amount: "", payer: "自分", among: ["自分"], deadline: "" };
+
+  state.goals = [];
+  state.showGoalForm = false;
+  state.goalForm = { name: "", target: "", deadline: "" };
+  state.addSavingGoalId = null;
+  state.addSavingAmount = "";
+}
+
+/* ================= 定数 / ヘルパー ================= */
+const CATEGORIES = [
+  { key: "食費", color: "#B23A2E" },
+  { key: "交通", color: "#2F9C8F" },
+  { key: "娯楽", color: "#C99A3B" },
+  { key: "日用品", color: "#5B7DB1" },
+  { key: "貯金", color: "#3F7D6E" },
+  { key: "立て替え精算", color: "#7C6FA0" },
+  { key: "その他", color: "#8A8577" },
+];
+const INCOME_CATEGORIES = [
+  { key: "バイト代", color: "#2F9C8F" },
+  { key: "仕送り", color: "#5B7DB1" },
+  { key: "奨学金", color: "#C99A3B" },
+  { key: "立て替え精算", color: "#7C6FA0" },
+  { key: "その他", color: "#8A8577" },
+];
+const yen = (n) => `¥${Math.round(n).toLocaleString()}`;
+const yenSigned = (n) => `${n<0?"-":""}¥${Math.round(Math.abs(n)).toLocaleString()}`;
+const uid = () => Math.random().toString(36).slice(2, 9);
+const todayStr = () => { const d = new Date(); return `${d.getMonth()+1}/${d.getDate()}`; };
+const pad2 = (n) => String(n).padStart(2,"0");
+const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; };
+// デモ用モックデータのISO日付を、当月の同じ日付として生成する
+const mockISO = (m,d) => { const y = new Date().getFullYear(); return `${y}-${pad2(m)}-${pad2(d)}`; };
+const currentYM = () => { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}`; };
+// dateISOが無い（古い）データは「今月」に含めておく後方互換のフォールバック
+const isThisMonth = (dateISO) => !dateISO || dateISO.slice(0,7) === currentYM();
+const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+/* ================= 永続化（localStorage） ================= */
+const STORAGE_KEY = "tsuuchoplus_data";
+function loadPersisted() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+function savePersisted() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      openingBalance: state.openingBalance,
+      expenses: state.expenses,
+      incomes: state.incomes,
+      members: state.members,
+      splitExpenses: state.splitExpenses,
+      goals: state.goals,
+    }));
+  } catch (e) {}
+}
+
+/* ================= 状態 ================= */
+const IS_FIRST_VISIT = !hasSeenTutorial();
+const PERSISTED = IS_FIRST_VISIT ? null : loadPersisted();
+const state = {
+  onboarding: { step: IS_FIRST_VISIT ? "tutorial" : "done", tutorialIndex: 0 },
+  openingBalance: PERSISTED ? (PERSISTED.openingBalance||0) : 0,
+  balanceInput: "",
+
+  tab: "home",
+  expenses: IS_FIRST_VISIT ? [
+    { id: uid(), amount: 850, category: "食費", memo: "学食（唐揚げ定食）", date: "7/24", dateISO: mockISO(7,24) },
+    { id: uid(), amount: 220, category: "交通", memo: "バス", date: "7/25", dateISO: mockISO(7,25) },
+    { id: uid(), amount: 1200, category: "娯楽", memo: "映画", date: "7/26", dateISO: mockISO(7,26) },
+    { id: uid(), amount: 600, category: "日用品", memo: "シャンプー", date: "7/26", dateISO: mockISO(7,26) },
+  ] : (PERSISTED ? PERSISTED.expenses : []),
+  showExpForm: false,
+  expForm: { amount: "", category: "食費", memo: "" },
+
+  incomes: IS_FIRST_VISIT ? [
+    { id: uid(), amount: 32000, category: "バイト代", memo: "コンビニバイト", date: "7/20", dateISO: mockISO(7,20) },
+    { id: uid(), amount: 50000, category: "仕送り", memo: "実家から", date: "7/1", dateISO: mockISO(7,1) },
+  ] : (PERSISTED ? PERSISTED.incomes : []),
+  showIncForm: false,
+  incForm: { amount: "", category: "バイト代", memo: "" },
+
+  members: IS_FIRST_VISIT ? ["自分", "あかり", "けんと", "ゆい"] : (PERSISTED ? PERSISTED.members : ["自分"]),
+  splitExpenses: IS_FIRST_VISIT ? [
+    { id: uid(), memo: "宿代", amount: 24000, payer: "自分", among: ["自分","あかり","けんと","ゆい"], deadline: "2026-08-05", paid: false },
+    { id: uid(), memo: "夜ご飯（焼肉）", amount: 9600, payer: "あかり", among: ["自分","あかり","けんと","ゆい"], deadline: "", paid: false },
+  ] : (PERSISTED ? PERSISTED.splitExpenses : []),
+  showSplitForm: false,
+  splitForm: { memo: "", amount: "", payer: "自分", among: IS_FIRST_VISIT ? ["自分","あかり","けんと","ゆい"] : (PERSISTED ? [...PERSISTED.members] : ["自分"]), deadline: "" },
+
+  goals: IS_FIRST_VISIT ? [
+    { id: uid(), name: "沖縄旅行", target: 60000, saved: 23000, deadline: "2026-09-01" },
+    { id: uid(), name: "新しいノートPC", target: 120000, saved: 15000, deadline: "" },
+  ] : (PERSISTED ? PERSISTED.goals : []),
+  showGoalForm: false,
+  goalForm: { name: "", target: "", deadline: "" },
+  addSavingGoalId: null,
+  addSavingAmount: "",
+};
+
+/* ================= 集計ロジック ================= */
+// 所持金の計算には常に「全期間」の合計を使う（月をまたいでも残高は引き継がれるため）
+function totalExpense() { return state.expenses.reduce((s,e)=>s+e.amount,0); }
+function totalIncome() { return state.incomes.reduce((s,e)=>s+e.amount,0); }
+function walletBalance() { return totalIncome() - totalExpense() + state.openingBalance; }
+// 画面表示の「今月の支出／収入」には当月分のみを使う
+function thisMonthExpense() { return state.expenses.filter(e=>isThisMonth(e.dateISO)).reduce((s,e)=>s+e.amount,0); }
+function thisMonthIncome() { return state.incomes.filter(e=>isThisMonth(e.dateISO)).reduce((s,e)=>s+e.amount,0); }
+function categoryData() {
+  return CATEGORIES.map(c => ({
+    name: c.key, color: c.color,
+    value: state.expenses.filter(e=>e.category===c.key && isThisMonth(e.dateISO)).reduce((s,e)=>s+e.amount,0),
+  })).filter(c=>c.value>0);
+}
+function balances() {
+  const b = {};
+  state.members.forEach(m => b[m]=0);
+  state.splitExpenses.filter(se=>!se.paid).forEach(se=>{
+    const share = se.amount/se.among.length;
+    se.among.forEach(m=>{ if(b[m]===undefined) b[m]=0; b[m]-=share; });
+    if(b[se.payer]===undefined) b[se.payer]=0;
+    b[se.payer]+=se.amount;
+  });
+  return b;
+}
+function settlements() {
+  const b = balances();
+  const creditors=[], debtors=[];
+  Object.entries(b).forEach(([name,val])=>{
+    if(val>1) creditors.push({name,val});
+    else if(val<-1) debtors.push({name,val:-val});
+  });
+  creditors.sort((a,b)=>b.val-a.val);
+  debtors.sort((a,b)=>b.val-a.val);
+  const res=[]; let i=0,j=0;
+  while(i<debtors.length && j<creditors.length){
+    const amt = Math.min(debtors[i].val, creditors[j].val);
+    res.push({from:debtors[i].name, to:creditors[j].name, amount:amt});
+    debtors[i].val -= amt; creditors[j].val -= amt;
+    if(debtors[i].val<1) i++;
+    if(creditors[j].val<1) j++;
+  }
+  return res;
+}
+
+/* ================= ハンコ演出 ================= */
+let stampTimer = null;
+function fireStamp() {
+  const wrap = document.getElementById("stampWrap");
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="stamp mincho">記帳<br/>済</div>`;
+  wrap.style.display = "flex";
+  clearTimeout(stampTimer);
+  stampTimer = setTimeout(()=>{ wrap.style.display="none"; wrap.innerHTML=""; }, 900);
+}
+
+/* ================= ドーナツグラフ ================= */
+function donutSVG(data, size=96, outerR=44, innerR=28) {
+  const total = data.reduce((s,d)=>s+d.value,0);
+  if (total<=0) return "";
+  const cx=size/2, cy=size/2;
+  if (data.length===1) {
+    const strokeW = outerR-innerR;
+    const r=(outerR+innerR)/2;
+    return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${data[0].color}" stroke-width="${strokeW}"/></svg>`;
+  }
+  let cumulate=0, paths="";
+  data.forEach(d=>{
+    const a0 = (cumulate/total)*2*Math.PI - Math.PI/2;
+    cumulate += d.value;
+    const a1 = (cumulate/total)*2*Math.PI - Math.PI/2;
+    const large = (a1-a0) > Math.PI ? 1 : 0;
+    const x1=cx+outerR*Math.cos(a0), y1=cy+outerR*Math.sin(a0);
+    const x2=cx+outerR*Math.cos(a1), y2=cy+outerR*Math.sin(a1);
+    const x3=cx+innerR*Math.cos(a1), y3=cy+innerR*Math.sin(a1);
+    const x4=cx+innerR*Math.cos(a0), y4=cy+innerR*Math.sin(a0);
+    paths += `<path d="M ${x1} ${y1} A ${outerR} ${outerR} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${innerR} ${innerR} 0 ${large} 0 ${x4} ${y4} Z" fill="${d.color}"/>`;
+  });
+  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">${paths}</svg>`;
+}
+
+/* ================= 共通パーツ描画 ================= */
+function ledgerRow(e, deletable, action, isIncome) {
+  return `
+  <div class="ledger-row">
+    <div style="flex:1;min-width:0;">
+      <div class="memo">${esc(e.memo)}</div>
+      <div class="meta">${esc(e.date||"")}${e.tag?` ・${esc(e.tag)}`:""}</div>
+    </div>
+    <div class="mono amt" style="${isIncome?"color:#2F9C8F;":""}">${isIncome?"+":""}${yen(e.amount)}</div>
+    ${deletable ? `<button class="trash-btn" data-action="${action}" data-id="${e.id}">${ICONS.trash(13,"#B0AA98")}</button>` : ""}
+  </div>`;
+}
+function splitRow(s) {
+  const dl = deadlineInfo(s.deadline);
+  const isPayerSelf = s.payer === "自分";
+  const amInAmong = s.among.includes("自分");
+  const involvesSelf = isPayerSelf || amInAmong;
+  const ownShare = amInAmong ? s.amount / s.among.length : 0;
+  // 自分から見た、この立て替えが精算された時の受け取り額（＋）/ 支払い額（－）
+  const selfDelta = isPayerSelf ? (s.amount - ownShare) : -ownShare;
+
+  return `
+  <div class="ledger-row" style="${s.paid?"opacity:0.55;":""}">
+    <div style="flex:1;min-width:0;">
+      <div class="memo">${esc(s.memo)}（${esc(s.payer)}が立替）</div>
+      <div class="meta">
+        ${s.among.length}人で割り勘
+        ${dl ? ` ・<span style="color:${dl.color}">${esc(dl.text)}</span>` : ""}
+        ${s.paid ? " ・支払い済み" : ""}
+      </div>
+    </div>
+    <div class="mono amt">${yen(s.amount)}</div>
+    ${involvesSelf ? `<button class="pay-btn ${s.paid?"paid":""}" data-action="toggle-split-paid" data-id="${s.id}" data-value="${selfDelta}">${s.paid?"精算済み":"支払い済"}</button>` : ""}
+    <button class="trash-btn" data-action="delete-split" data-id="${s.id}">${ICONS.trash(13,"#B0AA98")}</button>
+  </div>`;
+}
+function deadlineInfo(deadline) {
+  if (!deadline) return null;
+  const target = new Date(deadline + "T00:00:00");
+  const now = new Date(); now.setHours(0,0,0,0);
+  const diffDays = Math.round((target - now) / (1000*60*60*24));
+  const label = `${target.getFullYear()}/${target.getMonth()+1}/${target.getDate()}`;
+  if (diffDays < 0) return { text: `期限切れ（${label}）`, color: "#B23A2E" };
+  if (diffDays === 0) return { text: `今日が期限（${label}）`, color: "#B23A2E" };
+  return { text: `期限：${label}（あと${diffDays}日）`, color: "#9C9788" };
+}
+function goalBar(g, compact, deletable) {
+  const pct = Math.min(100, Math.round((g.saved/g.target)*100));
+  const dl = deadlineInfo(g.deadline);
+  const formOpen = state.addSavingGoalId === g.id;
+  return `
+  <div style="margin-bottom:${compact?"12px":"0"};">
+    <button data-action="toggle-add-saving" data-id="${g.id}" style="all:unset;cursor:pointer;display:block;width:100%;box-sizing:border-box;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;gap:6px;">
+        <span style="font-size:13.5px;font-weight:700;color:#1F2A37;">${esc(g.name)}</span>
+        <span class="mono" style="font-size:11.5px;color:#8A8577;margin-left:auto;">${yen(g.saved)} / ${yen(g.target)}</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:3px;">
+        <span style="font-size:10.5px;color:#9C9788;">${pct}% 達成</span>
+        ${dl ? `<span style="font-size:10.5px;color:${dl.color};font-weight:${dl.color==="#B23A2E"?"700":"400"};">${esc(dl.text)}</span>` : ""}
+      </div>
+    </button>
+    ${deletable ? `<button class="trash-btn" style="margin-top:2px;" data-action="delete-goal" data-id="${g.id}">${ICONS.trash(12,"#B0AA98")}</button>` : ""}
+
+    ${formOpen ? `
+    <div class="form-card" style="margin-top:8px;padding:14px 14px 12px;">
+      <button class="close-btn" data-action="toggle-add-saving" data-id="${g.id}">${ICONS.x(14,"#8A8577")}</button>
+      <div class="field-label">貯金する金額</div>
+      <div class="input-wrap">
+        <span class="yen-mark">¥</span>
+        <input class="input pl26 mono" inputmode="numeric" placeholder="0" value="${esc(state.addSavingAmount)}" data-bind="addSavingAmount" data-numeric="1" />
+      </div>
+      <div style="font-size:11px;color:#8A8577;margin-top:6px;">現在の所持金：<span class="mono">${yenSigned(walletBalance())}</span></div>
+      <button class="submit-btn" style="background:#2F9C8F;" data-action="submit-saving" data-id="${g.id}">所持金から貯金する</button>
+    </div>` : ""}
+  </div>`;
+}
+function emptyNote(text) { return `<div class="empty-note">${esc(text)}</div>`; }
+
+/* ================= タブ: ホーム ================= */
+function renderHome() {
+  const cats = categoryData();
+  const setl = settlements();
+  return `
+  <div class="tab-inner">
+    <div class="ledger-card">
+      <div style="display:flex;gap:16px;">
+        <div style="flex:1;">
+          <div class="ledger-label">今月の支出</div>
+          <div class="mono big-number" style="font-size:22px;">${yen(thisMonthExpense())}</div>
+        </div>
+        <div style="flex:1;">
+          <div class="ledger-label">今月の収入</div>
+          <div class="mono big-number" style="font-size:22px;">${yen(thisMonthIncome())}</div>
+        </div>
+      </div>
+      <div class="perf-line"></div>
+      <div class="ledger-label">所持金</div>
+      <div class="mono big-number" style="font-size:22px;color:${walletBalance()<0?"#B23A2E":"#2F9C8F"};">${yenSigned(walletBalance())}</div>
+    </div>
+
+    ${cats.length>0 ? `
+    <div class="section">
+      <div class="section-title">カテゴリ別の内訳</div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div style="width:96px;height:96px;flex-shrink:0;">${donutSVG(cats)}</div>
+        <div style="flex:1;">
+          ${cats.map(c=>`
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+              <span style="width:8px;height:8px;border-radius:2px;background:${c.color};display:inline-block;"></span>
+              <span style="font-size:12.5px;color:#4A4638;flex:1;">${esc(c.name)}</span>
+              <span class="mono" style="font-size:12.5px;color:#1F2A37;">${yen(c.value)}</span>
+            </div>`).join("")}
+        </div>
+      </div>
+    </div>` : ""}
+
+    ${setl.length>0 ? `
+    <div class="section">
+      <div class="section-title">精算が必要な割り勘</div>
+      ${setl.map(s=>`
+        <div class="settle-row">
+          <b>${esc(s.from)}</b> ${ICONS.arrow(14,"#8A8577")} <b>${esc(s.to)}</b>
+          <span class="mono settle-amt">${yen(s.amount)}</span>
+        </div>`).join("")}
+    </div>` : ""}
+
+    <div class="section">
+      <div class="section-title">貯金の進み具合</div>
+      ${state.goals.map(g=>goalBar(g,true,false)).join("")}
+      ${state.goals.length===0 ? emptyNote("貯金目標がまだありません。") : ""}
+    </div>
+  </div>`;
+}
+
+/* ================= タブ: 支出 ================= */
+function renderExpense() {
+  return `
+  <div class="tab-inner">
+    <div class="ledger-card">
+      <div class="ledger-label">今月の支出合計</div>
+      <div class="mono big-number">${yen(thisMonthExpense())}</div>
+    </div>
+
+    <button class="add-button" data-action="toggle-exp-form">${ICONS.plus(16,"#F1EDDD")} 支出を記帳する</button>
+
+    ${state.showExpForm ? `
+    <div class="form-card">
+      <button class="close-btn" data-action="toggle-exp-form">${ICONS.x(15,"#8A8577")}</button>
+      <div class="field-label">金額</div>
+      <div class="input-wrap">
+        <span class="yen-mark">¥</span>
+        <input id="expAmount" class="input pl26 mono" inputmode="numeric" placeholder="0" value="${esc(state.expForm.amount)}" data-bind="expForm.amount" data-numeric="1" />
+      </div>
+      <div class="field-label">カテゴリ</div>
+      <div class="chip-row">
+        ${CATEGORIES.map(c=>`
+          <button class="chip ${state.expForm.category===c.key?"active":""}" style="${state.expForm.category===c.key?`background:${c.color};border-color:${c.color};`:""}" data-action="select-exp-category" data-value="${c.key}">${c.key}</button>
+        `).join("")}
+      </div>
+      <div class="field-label">メモ</div>
+      <input id="expMemo" class="input" placeholder="例）学食、コンビニ など" value="${esc(state.expForm.memo)}" data-bind="expForm.memo" />
+      <button class="submit-btn" data-action="submit-expense">記帳する</button>
+    </div>` : ""}
+
+    <div class="section">
+      <div class="section-title">記帳一覧</div>
+      ${state.expenses.map(e=>ledgerRow({...e, tag:e.category}, true, "delete-expense")).join("")}
+      ${state.expenses.length===0 ? emptyNote("まだ記帳がありません。") : ""}
+    </div>
+  </div>`;
+}
+
+/* ================= タブ: 収入 ================= */
+function renderIncome() {
+  return `
+  <div class="tab-inner">
+    <div class="ledger-card">
+      <div class="ledger-label">今月の収入合計</div>
+      <div class="mono big-number" style="color:#2F9C8F;">${yen(thisMonthIncome())}</div>
+    </div>
+
+    <button class="add-button" data-action="toggle-inc-form">${ICONS.plus(16,"#F1EDDD")} 収入を記帳する</button>
+
+    ${state.showIncForm ? `
+    <div class="form-card">
+      <button class="close-btn" data-action="toggle-inc-form">${ICONS.x(15,"#8A8577")}</button>
+      <div class="field-label">金額</div>
+      <div class="input-wrap">
+        <span class="yen-mark">¥</span>
+        <input id="incAmount" class="input pl26 mono" inputmode="numeric" placeholder="0" value="${esc(state.incForm.amount)}" data-bind="incForm.amount" data-numeric="1" />
+      </div>
+      <div class="field-label">カテゴリ</div>
+      <div class="chip-row">
+        ${INCOME_CATEGORIES.map(c=>`
+          <button class="chip ${state.incForm.category===c.key?"active":""}" style="${state.incForm.category===c.key?`background:${c.color};border-color:${c.color};`:""}" data-action="select-inc-category" data-value="${c.key}">${c.key}</button>
+        `).join("")}
+      </div>
+      <div class="field-label">内容</div>
+      <input id="incMemo" class="input" placeholder="例）コンビニバイト、仕送り など" value="${esc(state.incForm.memo)}" data-bind="incForm.memo" />
+      <button class="submit-btn" style="background:#2F9C8F;" data-action="submit-income">記帳する</button>
+    </div>` : ""}
+
+    <div class="section">
+      <div class="section-title">記帳一覧</div>
+      ${state.incomes.map(e=>ledgerRow({...e, tag:e.category}, true, "delete-income", true)).join("")}
+      ${state.incomes.length===0 ? emptyNote("まだ記帳がありません。") : ""}
+    </div>
+  </div>`;
+}
+
+/* ================= タブ: 割り勘 ================= */
+function renderSplit() {
+  return `
+  <div class="tab-inner">
+    <button class="add-button" data-action="toggle-split-form">${ICONS.plus(16,"#F1EDDD")} 立て替えを記帳する</button>
+
+    ${state.showSplitForm ? `
+    <div class="form-card">
+      <button class="close-btn" data-action="toggle-split-form">${ICONS.x(15,"#8A8577")}</button>
+      <div class="field-label">内容</div>
+      <input id="splitMemo" class="input" placeholder="例）宿代、夜ご飯 など" value="${esc(state.splitForm.memo)}" data-bind="splitForm.memo" />
+      <div class="field-label">金額</div>
+      <div class="input-wrap">
+        <span class="yen-mark">¥</span>
+        <input id="splitAmount" class="input pl26 mono" inputmode="numeric" placeholder="0" value="${esc(state.splitForm.amount)}" data-bind="splitForm.amount" data-numeric="1" />
+      </div>
+      <div class="field-label">精算期限（任意）</div>
+      <input id="splitDeadline" type="date" class="input" value="${esc(state.splitForm.deadline)}" data-bind="splitForm.deadline" />
+      <div class="field-label">メンバー</div>
+      <div class="chip-row">
+        ${state.members.map(m=>`<span class="member-tag">${esc(m)}</span>`).join("")}
+      </div>
+      <div style="margin-top:8px;display:flex;gap:6px;">
+        <input id="newMemberInput" class="input" placeholder="メンバーを追加" style="flex:1;" />
+        <button class="small-add-btn" data-action="add-member">${ICONS.plus(16,"#fff")}</button>
+      </div>
+      <div class="field-label">支払った人</div>
+      <div class="chip-row">
+        ${state.members.map(m=>`
+          <button class="chip ${state.splitForm.payer===m?"active":""}" style="${state.splitForm.payer===m?"background:#16324F;border-color:#16324F;":""}" data-action="select-payer" data-value="${esc(m)}">${esc(m)}</button>
+        `).join("")}
+      </div>
+      <div class="field-label">割り勘する人</div>
+      <div class="chip-row">
+        ${state.members.map(m=>`
+          <button class="chip ${state.splitForm.among.includes(m)?"active":""}" style="${state.splitForm.among.includes(m)?"background:#2F9C8F;border-color:#2F9C8F;":""}" data-action="toggle-among" data-value="${esc(m)}">${esc(m)}</button>
+        `).join("")}
+      </div>
+      <button class="submit-btn" data-action="submit-split">記帳する</button>
+    </div>` : ""}
+
+    ${settlements().length>0 ? `
+    <div class="section">
+      <div class="section-title">精算方法</div>
+      ${settlements().map(s=>`
+        <div class="settle-row">
+          <b>${esc(s.from)}</b> ${ICONS.arrow(14,"#8A8577")} <b>${esc(s.to)}</b>
+          <span class="mono settle-amt">${yen(s.amount)}</span>
+        </div>`).join("")}
+    </div>` : ""}
+
+    <div class="section">
+      <div class="section-title">立て替え一覧</div>
+      ${state.splitExpenses.map(s=>splitRow(s)).join("")}
+      ${state.splitExpenses.length===0 ? emptyNote("まだ立て替えの記録がありません。") : ""}
+    </div>
+  </div>`;
+}
+
+/* ================= タブ: 貯金目標 ================= */
+function renderGoal() {
+  return `
+  <div class="tab-inner">
+    <button class="add-button" data-action="toggle-goal-form">${ICONS.plus(16,"#F1EDDD")} 貯金目標をつくる</button>
+
+    ${state.showGoalForm ? `
+    <div class="form-card">
+      <button class="close-btn" data-action="toggle-goal-form">${ICONS.x(15,"#8A8577")}</button>
+      <div class="field-label">目標の名前</div>
+      <input id="goalName" class="input" placeholder="例）沖縄旅行、新しいカメラ" value="${esc(state.goalForm.name)}" data-bind="goalForm.name" />
+      <div class="field-label">目標金額</div>
+      <div class="input-wrap">
+        <span class="yen-mark">¥</span>
+        <input id="goalTarget" class="input pl26 mono" inputmode="numeric" placeholder="0" value="${esc(state.goalForm.target)}" data-bind="goalForm.target" data-numeric="1" />
+      </div>
+      <div class="field-label">期限（任意）</div>
+      <input id="goalDeadline" type="date" class="input" value="${esc(state.goalForm.deadline)}" data-bind="goalForm.deadline" />
+      <button class="submit-btn" data-action="submit-goal">目標をつくる</button>
+    </div>` : ""}
+
+    ${state.goals.map(g=>`
+      <div style="margin-bottom:14px;">
+        ${goalBar(g,false,true)}
+      </div>
+    `).join("")}
+    ${state.goals.length===0 ? emptyNote("まだ貯金目標がありません。「貯金目標をつくる」から始めましょう。") : ""}
+  </div>`;
+}
+
+/* ================= 全体描画 ================= */
+const TAB_TITLES = { home:"今月のまとめ", expense:"支出の記録", income:"収入の記録", split:"割り勘・立て替え", goal:"貯金目標" };
+const TAB_ICONS = { home:"home", expense:"wallet", income:"income", split:"users", goal:"piggy" };
+const TAB_LABELS = { home:"ホーム", expense:"支出", income:"収入", split:"割り勘", goal:"貯金" };
+
+/* ================= オンボーディング画面 ================= */
+function renderTutorialScreen() {
+  const i = state.onboarding.tutorialIndex;
+  const slide = TUTORIAL_SLIDES[i];
+  const isLast = i === TUTORIAL_SLIDES.length - 1;
+  return `
+  <div class="page">
+    <div class="phone">
+      <div class="onboard-screen">
+        <button class="onboard-skip" data-action="skip-tutorial">スキップ</button>
+        <div class="onboard-icon">${ICONS[slide.icon](48,"#16324F")}</div>
+        <div class="onboard-title mincho">${esc(slide.title)}</div>
+        <div class="onboard-text">${esc(slide.text)}</div>
+        <div class="onboard-dots">
+          ${TUTORIAL_SLIDES.map((_,idx)=>`<span class="onboard-dot ${idx===i?"active":""}"></span>`).join("")}
+        </div>
+        <button class="submit-btn" style="max-width:260px;" data-action="${isLast?"finish-tutorial":"next-tutorial"}">${isLast?"はじめる":"次へ"}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function renderBalanceScreen() {
+  return `
+  <div class="page">
+    <div class="phone">
+      <div class="onboard-screen">
+        <div class="onboard-icon">${ICONS.wallet(48,"#16324F")}</div>
+        <div class="onboard-title mincho">今の所持金を教えてください</div>
+        <div class="onboard-text">お財布や口座に今あるお金を入力すると、これからの収支管理の基準になります。</div>
+        <div class="input-wrap" style="width:100%;max-width:220px;margin-top:20px;">
+          <span class="yen-mark">¥</span>
+          <input class="input pl26 mono" style="text-align:right;font-size:16px;" inputmode="numeric" placeholder="0" value="${esc(state.balanceInput)}" data-bind="balanceInput" data-numeric="1" />
+        </div>
+        <button class="submit-btn" style="max-width:260px;margin-top:20px;" data-action="finish-onboarding">はじめる</button>
+        <button class="onboard-later" data-action="skip-balance">あとで入力する</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderApp() {
+  if (state.onboarding.step === "tutorial") return renderTutorialScreen();
+  if (state.onboarding.step === "balance") return renderBalanceScreen();
+  const tabHtml = { home:renderHome, expense:renderExpense, income:renderIncome, split:renderSplit, goal:renderGoal }[state.tab]();
+  return `
+  <div class="page">
+    <div class="phone">
+      <div class="header">
+        <div class="header-top">
+          <span class="mincho brand">通帳plus</span>
+          <span class="header-sub">${TAB_TITLES[state.tab]}</span>
+        </div>
+      </div>
+      <div class="content" id="contentArea">${tabHtml}</div>
+      <div class="nav">
+        ${["home","expense","income","split","goal"].map(t=>`
+          <button class="nav-btn ${state.tab===t?"active":""}" data-action="set-tab" data-value="${t}">
+            ${ICONS[TAB_ICONS[t]](19, state.tab===t?"#16324F":"#B0AA98")}
+            <span class="label">${TAB_LABELS[t]}</span>
+            ${state.tab===t ? `<span class="nav-dot"></span>` : ""}
+          </button>
+        `).join("")}
+      </div>
+      <div class="stamp-wrap" id="stampWrap" style="display:none;"></div>
+    </div>
+  </div>`;
+}
+
+function render() {
+  document.getElementById("app").innerHTML = renderApp();
+  attachEvents();
+  if (state.onboarding.step === "done") savePersisted();
+}
+
+/* ================= state ヘルパー ================= */
+function setPath(obj, path, value) {
+  const parts = path.split(".");
+  let o = obj;
+  for (let i=0;i<parts.length-1;i++) o = o[parts[i]];
+  o[parts[parts.length-1]] = value;
+}
+
+/* ================= イベント ================= */
+function attachEvents() {
+  const app = document.getElementById("app");
+
+  // テキスト/金額入力（再描画しない：フォーカスを維持）
+  app.querySelectorAll("[data-bind]").forEach(el=>{
+    el.addEventListener("input", (e)=>{
+      let v = e.target.value;
+      if (el.dataset.numeric) {
+        v = v.replace(/[^0-9]/g,"");
+        e.target.value = v;
+      }
+      setPath(state, el.dataset.bind, v);
+    });
+  });
+  // クリック系
+  app.querySelectorAll("[data-action]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      const action = el.dataset.action;
+      const value = el.dataset.value;
+      const id = el.dataset.id;
+      handleAction(action, value, id);
+    });
+  });
+}
+
+function handleAction(action, value, id) {
+  switch(action) {
+    case "skip-tutorial":
+    case "finish-tutorial":
+      state.onboarding.step = "balance"; render(); break;
+    case "next-tutorial":
+      state.onboarding.tutorialIndex = Math.min(state.onboarding.tutorialIndex+1, TUTORIAL_SLIDES.length-1);
+      render(); break;
+    case "finish-onboarding": {
+      const amt = parseFloat(state.balanceInput);
+      state.openingBalance = (!isNaN(amt) && amt>0) ? amt : 0;
+      state.onboarding.step = "done";
+      clearMockData();
+      markTutorialSeen();
+      render(); fireStamp();
+      break;
+    }
+    case "skip-balance":
+      state.openingBalance = 0;
+      state.onboarding.step = "done";
+      clearMockData();
+      markTutorialSeen();
+      render();
+      break;
+
+    case "set-tab":
+      state.tab = value; render(); break;
+
+    case "toggle-exp-form":
+      state.showExpForm = !state.showExpForm; render(); break;
+    case "select-exp-category":
+      state.expForm.category = value; render(); break;
+    case "submit-expense": {
+      const amt = parseFloat(state.expForm.amount);
+      if (!amt || amt<=0) return;
+      state.expenses.unshift({ id: uid(), amount: amt, category: state.expForm.category, memo: state.expForm.memo.trim()||"（メモなし）", date: todayStr(), dateISO: todayISO() });
+      state.expForm = { amount:"", category:"食費", memo:"" };
+      state.showExpForm = false;
+      render(); fireStamp();
+      break;
+    }
+    case "delete-expense":
+      state.expenses = state.expenses.filter(e=>e.id!==id); render(); break;
+
+    case "toggle-inc-form":
+      state.showIncForm = !state.showIncForm; render(); break;
+    case "select-inc-category":
+      state.incForm.category = value; render(); break;
+    case "submit-income": {
+      const amt = parseFloat(state.incForm.amount);
+      if (!amt || amt<=0) return;
+      state.incomes.unshift({ id: uid(), amount: amt, category: state.incForm.category, memo: state.incForm.memo.trim()||"（メモなし）", date: todayStr(), dateISO: todayISO() });
+      state.incForm = { amount:"", category:"バイト代", memo:"" };
+      state.showIncForm = false;
+      render(); fireStamp();
+      break;
+    }
+    case "delete-income":
+      state.incomes = state.incomes.filter(e=>e.id!==id); render(); break;
+
+    case "toggle-split-form":
+      state.showSplitForm = !state.showSplitForm; render(); break;
+    case "select-payer":
+      state.splitForm.payer = value; render(); break;
+    case "toggle-among": {
+      const among = state.splitForm.among;
+      state.splitForm.among = among.includes(value) ? among.filter(m=>m!==value) : [...among, value];
+      render(); break;
+    }
+    case "add-member": {
+      const input = document.getElementById("newMemberInput");
+      const name = input.value.trim();
+      if (!name || state.members.includes(name)) return;
+      state.members.push(name);
+      state.splitForm.among.push(name);
+      render();
+      break;
+    }
+    case "submit-split": {
+      const amt = parseFloat(state.splitForm.amount);
+      if (!amt || amt<=0 || state.splitForm.among.length===0) return;
+      state.splitExpenses.unshift({ id: uid(), memo: state.splitForm.memo.trim()||"（メモなし）", amount: amt, payer: state.splitForm.payer, among: [...state.splitForm.among], deadline: state.splitForm.deadline, paid: false });
+      state.splitForm = { memo:"", amount:"", payer:"自分", among:[...state.members], deadline:"" };
+      state.showSplitForm = false;
+      render(); fireStamp();
+      break;
+    }
+    case "delete-split": {
+      const target = state.splitExpenses.find(s=>s.id===id);
+      if (target && target.paid) {
+        if (target.settleEntryType === "income") state.incomes = state.incomes.filter(e=>e.id!==target.settleEntryId);
+        if (target.settleEntryType === "expense") state.expenses = state.expenses.filter(e=>e.id!==target.settleEntryId);
+      }
+      state.splitExpenses = state.splitExpenses.filter(s=>s.id!==id);
+      render(); break;
+    }
+
+    case "toggle-split-paid": {
+      const s = state.splitExpenses.find(sp=>sp.id===id);
+      if (!s) return;
+      if (!s.paid) {
+        // 支払い済にする：自分が受け取った分は「収入」に、自分が支払った分は「支出」に記帳する
+        const ownShare = s.among.includes("自分") ? s.amount / s.among.length : 0;
+        const isPayerSelf = s.payer === "自分";
+        const delta = isPayerSelf ? (s.amount - ownShare) : -ownShare;
+        if (delta > 0) {
+          const entry = { id: uid(), amount: delta, category: "立て替え精算", memo: `${s.memo}の精算（受取）`, date: todayStr(), dateISO: todayISO() };
+          state.incomes.unshift(entry);
+          s.settleEntryId = entry.id; s.settleEntryType = "income";
+        } else if (delta < 0) {
+          const entry = { id: uid(), amount: -delta, category: "立て替え精算", memo: `${s.memo}の精算（支払）`, date: todayStr(), dateISO: todayISO() };
+          state.expenses.unshift(entry);
+          s.settleEntryId = entry.id; s.settleEntryType = "expense";
+        }
+        s.paid = true;
+        render(); fireStamp();
+      } else {
+        // 取り消し：記帳した収入・支出を削除する
+        if (s.settleEntryType === "income") state.incomes = state.incomes.filter(e=>e.id!==s.settleEntryId);
+        if (s.settleEntryType === "expense") state.expenses = state.expenses.filter(e=>e.id!==s.settleEntryId);
+        s.paid = false; s.settleEntryId = null; s.settleEntryType = null;
+        render();
+      }
+      break;
+    }
+
+    case "toggle-goal-form":
+      state.showGoalForm = !state.showGoalForm; render(); break;
+    case "submit-goal": {
+      const t = parseFloat(state.goalForm.target);
+      if (!state.goalForm.name.trim() || !t || t<=0) return;
+      state.goals.push({ id: uid(), name: state.goalForm.name.trim(), target: t, saved: 0, deadline: state.goalForm.deadline });
+      state.goalForm = { name:"", target:"", deadline:"" };
+      state.showGoalForm = false;
+      render();
+      break;
+    }
+    case "delete-goal":
+      state.goals = state.goals.filter(g=>g.id!==id);
+      if (state.addSavingGoalId===id) { state.addSavingGoalId=null; state.addSavingAmount=""; }
+      render(); break;
+
+    case "toggle-add-saving":
+      state.addSavingGoalId = state.addSavingGoalId===id ? null : id;
+      state.addSavingAmount = "";
+      render(); break;
+    case "submit-saving": {
+      const amt = parseFloat(state.addSavingAmount);
+      if (!amt || amt<=0) return;
+      const g = state.goals.find(gg=>gg.id===id);
+      if (!g) return;
+      g.saved += amt;
+      state.expenses.unshift({ id: uid(), amount: amt, category: "貯金", memo: `${g.name}に貯金`, date: todayStr(), dateISO: todayISO() });
+      state.addSavingAmount = "";
+      state.addSavingGoalId = null;
+      render(); fireStamp();
+      break;
+    }
+  }
+}
+
+render();
+
+/* ================= PWA: Service Worker登録 ================= */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
