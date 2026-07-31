@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>通帳plus - 学生のためのお金管理</title>
 <meta name="theme-color" content="#16324F" />
 <link rel="manifest" href="manifest.json" />
@@ -15,11 +15,52 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg-page: #E7E2D2;
+    --bg-phone: #EFECE0;
+    --bg-surface: #ffffff;
+    --bg-surface-hover: #FAF8F0;
+    --bg-input: #FAF8F0;
+    --bg-active: #F1EDDD;
+    --bg-nav: #F6F3EA;
+    --border: #E5E0CF;
+    --border-soft: #EFEBDD;
+    --border-input: #E1DDCE;
+    --dash: #D8D3C0;
+    --dash-row: #DEDACB;
+    --text-primary: #1F2A37;
+    --text-secondary: #9C9788;
+    --text-muted: #8A8577;
+    --text-faint: #B0AA98;
+    --heading: #16324F;
+  }
+  body.dark {
+    --bg-page: #11151B;
+    --bg-phone: #1B2029;
+    --bg-surface: #242B36;
+    --bg-surface-hover: #2B3341;
+    --bg-input: #2B3341;
+    --bg-active: #2B3A50;
+    --bg-nav: #1B2029;
+    --border: #38414F;
+    --border-soft: #38414F;
+    --border-input: #3A4350;
+    --dash: #3A4350;
+    --dash-row: #3A4350;
+    --text-primary: #E7E2D2;
+    --text-secondary: #9AA5B5;
+    --text-muted: #939FB0;
+    --text-faint: #6E7889;
+    --heading: #9DC3F5;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
   html, body { height: 100%; }
   body {
     font-family: 'Zen Kaku Gothic New', sans-serif;
-    background: #E7E2D2;
+    background: var(--bg-page);
+    touch-action: manipulation;
+    transition: background 0.2s ease;
   }
   button, input, select { font-family: inherit; }
   button { cursor: pointer; background: none; border: none; }
@@ -27,7 +68,8 @@
   .mono { font-family: 'JetBrains Mono', monospace; }
 
   .page {
-    min-height: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     justify-content: center;
     padding: 28px 12px;
@@ -36,7 +78,7 @@
     width: 420px;
     max-width: 100%;
     height: 800px;
-    background: #EFECE0;
+    background: var(--bg-phone);
     border-radius: 30px;
     box-shadow: 0 24px 60px rgba(22,50,79,0.28), 0 0 0 8px #16324F, 0 0 0 9px #0F2338;
     overflow: hidden;
@@ -45,70 +87,133 @@
     position: relative;
   }
   @media (max-width: 460px) {
-    .page { padding: 0; }
-    .phone { width: 100%; height: 100dvh; border-radius: 0; box-shadow: none; }
+    .page { padding: 0; min-height: 100vh; min-height: 100dvh; }
+    .phone { width: 100%; height: 100vh; height: 100dvh; border-radius: 0; box-shadow: none; }
   }
 
   .header {
     background: #16324F;
-    padding: calc(20px + env(safe-area-inset-top)) 20px 16px;
+    padding: 20px 20px 16px;
     flex-shrink: 0;
   }
+  .header { position: relative; }
   .header-top { display: flex; align-items: baseline; justify-content: space-between; }
   .brand { color: #F1EDDD; font-size: 19px; letter-spacing: 1px; }
+  .header-right { display: flex; align-items: center; gap: 7px; }
   .header-sub { color: #9FB4CC; font-size: 11.5px; }
+  .menu-btn { padding: 3px; display: flex; align-items: center; opacity: 0.9; }
+  .month-menu {
+    position: absolute; top: 100%; right: 16px; margin-top: 6px; z-index: 30;
+    background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 10px 26px rgba(22,50,79,0.22); padding: 6px; min-width: 160px;
+    max-height: 260px; overflow-y: auto; animation: fadeUp 0.15s ease;
+  }
+  .month-menu-label {
+    font-size: 10.5px; color: var(--text-secondary); font-weight: 700; padding: 6px 10px 4px; letter-spacing: 0.5px;
+  }
+  .month-menu-item {
+    display: block; width: 100%; text-align: left; padding: 9px 10px; border-radius: 8px;
+    font-size: 13px; color: var(--text-primary);
+  }
+  .month-menu-item.active { background: var(--bg-active); color: var(--heading); font-weight: 700; }
+  .month-menu.member-menu { min-width: 230px; max-width: 260px; }
+  .menu-back {
+    display: flex; align-items: center; gap: 5px; width: 100%;
+    font-size: 11.5px; color: var(--text-muted); font-weight: 600;
+    padding: 6px 8px 8px; border-bottom: 1px solid var(--border-soft); margin-bottom: 4px;
+  }
+  .member-edit-list { max-height: 180px; overflow-y: auto; }
+  .member-edit-row { display: flex; align-items: center; gap: 6px; padding: 7px 6px; border-radius: 8px; }
+  .member-edit-row:hover { background: var(--bg-surface-hover); }
+  .member-edit-name { flex: 1; font-size: 13px; color: var(--text-primary); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .member-edit-self { font-size: 10.5px; color: var(--text-secondary); margin-left: 4px; }
+  .member-edit-row button[data-action="delete-member"].confirm {
+    font-size: 10.5px; color: #B23A2E; font-weight: 700; white-space: nowrap; padding: 3px 6px;
+  }
+  .member-edit-add { display: flex; gap: 6px; padding: 8px 4px 2px; border-top: 1px solid var(--border-soft); margin-top: 4px; }
+  .member-edit-add .input { padding: 7px 9px; font-size: 12.5px; }
+  .history-banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--bg-active); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; margin-bottom: 14px; font-size: 12px; color: var(--heading); font-weight: 600;
+  }
+  .history-banner button { color: #2F9C8F; font-weight: 700; text-decoration: underline; flex-shrink: 0; font-size: 12px; }
+  .field-error { color: #B23A2E; font-size: 11px; margin-top: 5px; line-height: 1.5; }
+
+  .settings-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 10px; border-radius: 8px; font-size: 13px; color: var(--text-primary); font-weight: 600;
+  }
+  .switch { position: relative; width: 38px; height: 22px; border-radius: 20px; background: var(--border); flex-shrink: 0; transition: background 0.15s ease; }
+  .switch.on { background: #2F9C8F; }
+  .switch-knob { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left 0.15s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+  .switch.on .switch-knob { left: 18px; }
+  .settings-danger { color: #B23A2E; }
+  .settings-confirm-box {
+    background: var(--bg-active); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px; margin: 4px 6px 2px; font-size: 12px; color: var(--text-primary); line-height: 1.6;
+  }
+  .settings-confirm-actions { display: flex; gap: 8px; margin-top: 8px; }
+  .settings-confirm-actions button {
+    flex: 1; padding: 8px 0; border-radius: 8px; font-size: 12px; font-weight: 700;
+  }
+  .settings-confirm-actions .btn-cancel { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-primary); }
+  .settings-confirm-actions .btn-danger { background: #B23A2E; color: #fff; }
+  .mini-btn { flex: 1; padding: 9px 0; border-radius: 8px; font-size: 12.5px; font-weight: 700; text-align: center; }
+  .mini-btn.primary { background: #2F9C8F; color: #fff; }
+  .mini-btn.secondary { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-primary); }
 
   .content { flex: 1; overflow-y: auto; }
   .content::-webkit-scrollbar { width: 5px; }
-  .content::-webkit-scrollbar-thumb { background: #D8D3C0; border-radius: 3px; }
-  .tab-inner { padding: 18px 18px calc(96px + env(safe-area-inset-bottom)); }
+  .content::-webkit-scrollbar-thumb { background: var(--dash); border-radius: 3px; }
+  .tab-inner { padding: 18px 18px 90px; }
 
   .ledger-card {
-    background: #fff;
-    border: 1px solid #E5E0CF;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
     border-radius: 14px;
     padding: 16px 18px;
-    box-shadow: 0 2px 0 #E5E0CF;
+    box-shadow: 0 2px 0 var(--border);
   }
-  .ledger-label { font-size: 11px; color: #9C9788; margin-bottom: 4px; letter-spacing: 0.5px; }
-  .big-number { font-size: 30px; font-weight: 700; color: #16324F; }
+  .ledger-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; letter-spacing: 0.5px; }
+  .big-number { font-size: 30px; font-weight: 700; color: var(--heading); }
   .perf-line {
     height: 1px;
-    background: repeating-linear-gradient(to right, #D8D3C0 0, #D8D3C0 4px, transparent 4px, transparent 9px);
+    background: repeating-linear-gradient(to right, var(--dash) 0, var(--dash) 4px, transparent 4px, transparent 9px);
     margin: 12px 0;
   }
 
   .section { margin-top: 22px; }
-  .section-title { font-size: 12.5px; font-weight: 700; color: #6B6656; margin-bottom: 9px; letter-spacing: 0.5px; }
+  .section-title { font-size: 12.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 9px; letter-spacing: 0.5px; }
 
   .ledger-row {
     display: flex; align-items: center; gap: 8px;
-    padding: 9px 4px; border-bottom: 1px dashed #DEDACB;
+    padding: 9px 4px; border-bottom: 1px dashed var(--dash-row);
     animation: fadeUp 0.25s ease;
   }
-  .ledger-row .memo { font-size: 13.5px; color: #1F2A37; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ledger-row .meta { font-size: 11px; color: #9C9788; margin-top: 2px; }
-  .ledger-row .amt { font-size: 14px; font-weight: 700; color: #1F2A37; white-space: nowrap; }
+  .ledger-row .memo { font-size: 13.5px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ledger-row .meta { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+  .ledger-row .amt { font-size: 14px; font-weight: 700; color: var(--text-primary); white-space: nowrap; }
 
   .settle-row {
     display: flex; align-items: center; gap: 8px;
-    background: #fff; border: 1px solid #E5E0CF; border-radius: 10px;
-    padding: 9px 12px; margin-bottom: 7px; font-size: 13px;
+    background: var(--bg-surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 9px 12px; margin-bottom: 7px; font-size: 13px; color: var(--text-primary);
   }
   .settle-row b { font-weight: 700; }
   .settle-amt { margin-left: auto; color: #B23A2E; font-weight: 700; }
 
   .member-tag {
-    font-size: 11.5px; background: #F1EDDD; color: #16324F;
+    font-size: 11.5px; background: var(--bg-active); color: var(--heading);
     padding: 3px 9px; border-radius: 20px; font-weight: 600; display: inline-block;
   }
 
-  .bar-track { height: 8px; background: #E5E0CF; border-radius: 5px; overflow: hidden; }
+  .bar-track { height: 8px; background: var(--border); border-radius: 5px; overflow: hidden; }
   .bar-fill { height: 100%; background: linear-gradient(90deg,#2F9C8F,#57BBAD); border-radius: 5px; }
 
   .empty-note {
-    font-size: 12.5px; color: #9C9788; background: #fff;
-    border: 1px dashed #DEDACB; border-radius: 10px; padding: 16px 14px;
+    font-size: 12.5px; color: var(--text-secondary); background: var(--bg-surface);
+    border: 1px dashed var(--dash-row); border-radius: 10px; padding: 16px 14px;
     text-align: center; line-height: 1.6;
   }
 
@@ -119,25 +224,25 @@
   }
 
   .form-card {
-    background: #fff; border: 1px solid #E5E0CF; border-radius: 14px;
+    background: var(--bg-surface); border: 1px solid var(--border); border-radius: 14px;
     padding: 18px 16px 16px; margin-top: 12px; position: relative;
     animation: fadeUp 0.25s ease;
   }
   .close-btn { position: absolute; top: 10px; right: 10px; padding: 4px; }
-  .field-label { font-size: 11.5px; color: #8A8577; font-weight: 700; margin-top: 12px; margin-bottom: 5px; }
+  .field-label { font-size: 11.5px; color: var(--text-muted); font-weight: 700; margin-top: 12px; margin-bottom: 5px; }
   .input-wrap { position: relative; }
-  .yen-mark { position: absolute; left: 10px; top: 9px; font-size: 13.5px; color: #8A8577; }
+  .yen-mark { position: absolute; left: 10px; top: 9px; font-size: 13.5px; color: var(--text-muted); }
   .input {
-    width: 100%; border: 1px solid #E1DDCE; border-radius: 9px; padding: 9px 10px;
-    font-size: 13.5px; color: #1F2A37; outline: none; background: #FAF8F0;
+    width: 100%; border: 1px solid var(--border-input); border-radius: 9px; padding: 9px 10px;
+    font-size: 13.5px; color: var(--text-primary); outline: none; background: var(--bg-input);
   }
-  .input:focus { border-color: #16324F; }
+  .input:focus { border-color: var(--heading); }
   .input.pl26 { padding-left: 26px; }
 
   .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip {
-    border: 1px solid #E1DDCE; border-radius: 20px; padding: 6px 12px;
-    font-size: 12px; font-weight: 600; background: #fff; color: #4A4638;
+    border: 1px solid var(--border-input); border-radius: 20px; padding: 6px 12px;
+    font-size: 12px; font-weight: 600; background: var(--bg-surface); color: var(--text-primary);
   }
   .chip.active { color: #fff; }
 
@@ -154,23 +259,20 @@
 
   .pay-btn {
     font-size: 10.5px; font-weight: 700; color: #2F9C8F; border: 1px solid #2F9C8F;
-    border-radius: 20px; padding: 5px 9px; flex-shrink: 0; white-space: nowrap; background: #fff;
+    border-radius: 20px; padding: 5px 9px; flex-shrink: 0; white-space: nowrap; background: var(--bg-surface);
   }
   .pay-btn.paid { background: #2F9C8F; color: #fff; }
 
   .nav {
-    display: flex; border-top: 1px solid #E1DDCE; background: #F6F3EA;
-    padding: 8px 0 calc(10px + env(safe-area-inset-bottom));
-    flex-shrink: 0;
-    position: absolute; left: 0; right: 0; bottom: 0;
-    z-index: 5;
+    display: flex; border-top: 1px solid var(--border-input); background: var(--bg-nav);
+    padding: 8px 0 10px; flex-shrink: 0;
   }
   .nav-btn {
     flex: 1; display: flex; flex-direction: column; align-items: center; position: relative;
   }
-  .nav-btn .label { font-size: 10px; margin-top: 2px; color: #B0AA98; font-weight: 500; }
-  .nav-btn.active .label { color: #16324F; font-weight: 700; }
-  .nav-dot { position: absolute; top: -8px; width: 20px; height: 3px; border-radius: 3px; background: #16324F; }
+  .nav-btn .label { font-size: 10px; margin-top: 2px; color: var(--text-faint); font-weight: 500; }
+  .nav-btn.active .label { color: var(--heading); font-weight: 700; }
+  .nav-dot { position: absolute; bottom: -8px; width: 20px; height: 3px; border-radius: 3px; background: var(--heading); }
 
   .stamp-wrap {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -199,22 +301,22 @@
   .onboard-screen {
     height: 100%; width: 100%; display: flex; flex-direction: column;
     align-items: center; justify-content: center; padding: 40px 30px;
-    text-align: center; position: relative; background: #EFECE0;
+    text-align: center; position: relative; background: var(--bg-phone);
   }
   .onboard-skip {
-    position: absolute; top: 18px; right: 16px; font-size: 12px;
-    color: #8A8577; font-weight: 600; padding: 6px 10px;
+    position: absolute; bottom: 18px; right: 16px; font-size: 12px;
+    color: var(--text-muted); font-weight: 600; padding: 6px 10px;
   }
   .onboard-icon {
-    width: 88px; height: 88px; border-radius: 50%; background: #F1EDDD;
+    width: 88px; height: 88px; border-radius: 50%; background: var(--bg-active);
     display: flex; align-items: center; justify-content: center; margin-bottom: 22px;
   }
-  .onboard-title { font-size: 19px; color: #16324F; font-weight: 700; margin-bottom: 10px; letter-spacing: 0.5px; }
-  .onboard-text { font-size: 13px; color: #6B6656; line-height: 1.75; max-width: 280px; }
+  .onboard-title { font-size: 19px; color: var(--heading); font-weight: 700; margin-bottom: 10px; letter-spacing: 0.5px; }
+  .onboard-text { font-size: 13px; color: var(--text-secondary); line-height: 1.75; max-width: 280px; }
   .onboard-dots { display: flex; gap: 6px; margin: 26px 0 22px; }
-  .onboard-dot { width: 6px; height: 6px; border-radius: 50%; background: #D8D3C0; transition: all 0.2s ease; }
-  .onboard-dot.active { background: #16324F; width: 16px; border-radius: 4px; }
-  .onboard-later { margin-top: 14px; font-size: 12px; color: #9C9788; text-decoration: underline; }
+  .onboard-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dash); transition: all 0.2s ease; }
+  .onboard-dot.active { background: var(--heading); width: 16px; border-radius: 4px; }
+  .onboard-later { margin-top: 14px; font-size: 12px; color: var(--text-secondary); text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -233,6 +335,12 @@ const ICONS = {
   trash: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg>`,
   check: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 9.5 17 19 7"/></svg>`,
   income: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>`,
+  menu: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>`,
+  edit: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`,
+  calendar: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>`,
+  settings: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V19a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H4a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H10a1.65 1.65 0 0 0 1-1.51V4a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V10a1.65 1.65 0 0 0 1.51 1H20a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>`,
+  target: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="${c}"/></svg>`,
+  bell: (s,c)=>`<svg class="icon" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M18 16v-5a6 6 0 1 0-12 0v5l-1.6 2.4A1 1 0 0 0 5.2 20h13.6a1 1 0 0 0 .8-1.6Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>`,
 };
 
 /* ================= チュートリアル ================= */
@@ -242,6 +350,8 @@ const TUTORIAL_SLIDES = [
   { icon: "income", title: "収入を記録", text: "バイト代や仕送りなど、入ってきたお金もかんたんに記録できます。" },
   { icon: "users", title: "割り勘・立て替え", text: "友達との立て替えを記録すると、誰が誰にいくら払えばいいか自動で計算。支払いが済んだら「支払い済」を押すだけで収支に反映されます。" },
   { icon: "piggy", title: "貯金目標", text: "欲しいものや旅行のために目標をつくって、所持金からコツコツ貯金できます。" },
+  { icon: "target", title: "予算を設定", text: "右上のメニューから「予算設定」を選ぶと、月の使いすぎを防ぐ予算を設定できます。" },
+  { icon: "bell", title: "記帳リマインダー通知", text: "右上のメニューの「設定」から通知をオンにすると、設定した時刻にまだ記帳していない日だけお知らせします。" },
 ];
 function hasSeenTutorial() {
   try { return localStorage.getItem("tsuuchoplus_onboarded") === "1"; } catch (e) { return false; }
@@ -249,25 +359,49 @@ function hasSeenTutorial() {
 function markTutorialSeen() {
   try { localStorage.setItem("tsuuchoplus_onboarded", "1"); } catch (e) {}
 }
+// ダークモードはアプリの表示設定なので、家計データとは別のキーで保存する
+const DARK_MODE_KEY = "tsuuchoplus_dark_mode";
+function loadDarkMode() {
+  try { return localStorage.getItem(DARK_MODE_KEY) === "1"; } catch (e) { return false; }
+}
+function saveDarkMode(on) {
+  try { localStorage.setItem(DARK_MODE_KEY, on ? "1" : "0"); } catch (e) {}
+}
+// 記帳リマインダー通知の設定（オン/オフ・時刻）も家計データとは別のキーで保存する
+const NOTIFICATION_KEY = "tsuuchoplus_notification";
+function loadNotificationSettings() {
+  try {
+    const raw = localStorage.getItem(NOTIFICATION_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return { enabled: !!parsed.enabled, time: parsed.time || "20:00" };
+    }
+  } catch (e) {}
+  return { enabled: false, time: "20:00" };
+}
+function saveNotificationSettings() {
+  try { localStorage.setItem(NOTIFICATION_KEY, JSON.stringify(state.notification)); } catch (e) {}
+}
 function clearMockData() {
   state.expenses = [];
   state.showExpForm = false;
-  state.expForm = { amount: "", category: "食費", memo: "" };
+  state.expForm = { amount: "", category: "食費", memo: "", error: null };
 
   state.incomes = [];
   state.showIncForm = false;
-  state.incForm = { amount: "", category: "バイト代", memo: "" };
+  state.incForm = { amount: "", category: "バイト代", memo: "", error: null };
 
   state.members = ["自分"];
   state.splitExpenses = [];
   state.showSplitForm = false;
-  state.splitForm = { memo: "", amount: "", payer: "自分", among: ["自分"], deadline: "" };
+  state.splitForm = { memo: "", amount: "", payer: "自分", among: ["自分"], deadline: "", error: null };
 
   state.goals = [];
   state.showGoalForm = false;
-  state.goalForm = { name: "", target: "", deadline: "" };
+  state.goalForm = { name: "", target: "", deadline: "", error: null };
   state.addSavingGoalId = null;
   state.addSavingAmount = "";
+  state.savingError = null;
 }
 
 /* ================= 定数 / ヘルパー ================= */
@@ -278,14 +412,14 @@ const CATEGORIES = [
   { key: "日用品", color: "#5B7DB1" },
   { key: "貯金", color: "#3F7D6E" },
   { key: "立て替え精算", color: "#7C6FA0" },
-  { key: "その他", color: "#8A8577" },
+  { key: "その他", color: "var(--text-muted)" },
 ];
 const INCOME_CATEGORIES = [
   { key: "バイト代", color: "#2F9C8F" },
   { key: "仕送り", color: "#5B7DB1" },
   { key: "奨学金", color: "#C99A3B" },
   { key: "立て替え精算", color: "#7C6FA0" },
-  { key: "その他", color: "#8A8577" },
+  { key: "その他", color: "var(--text-muted)" },
 ];
 const yen = (n) => `¥${Math.round(n).toLocaleString()}`;
 const yenSigned = (n) => `${n<0?"-":""}¥${Math.round(Math.abs(n)).toLocaleString()}`;
@@ -296,8 +430,20 @@ const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad2
 // デモ用モックデータのISO日付を、当月の同じ日付として生成する
 const mockISO = (m,d) => { const y = new Date().getFullYear(); return `${y}-${pad2(m)}-${pad2(d)}`; };
 const currentYM = () => { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}`; };
-// dateISOが無い（古い）データは「今月」に含めておく後方互換のフォールバック
-const isThisMonth = (dateISO) => !dateISO || dateISO.slice(0,7) === currentYM();
+// dateISOが無い（古い）データは対象月に含めておく後方互換のフォールバック
+const isSameMonth = (dateISO, ym) => !dateISO || dateISO.slice(0,7) === ym;
+const isThisMonth = (dateISO) => isSameMonth(dateISO, currentYM());
+// 現在閲覧中の月（ヘッダーの月メニューで切替）に含まれるかどうか
+const isViewMonth = (dateISO) => isSameMonth(dateISO, state.viewMonth);
+const monthLabel = (ym) => { const [y,m] = ym.split("-"); return `${y}年${parseInt(m,10)}月`; };
+const monthShortLabel = (ym) => `${parseInt(ym.split("-")[1],10)}月`;
+// 記帳データに実際に存在する年月＋現在の月を新しい順で列挙する
+function availableMonths() {
+  const set = new Set([currentYM()]);
+  state.expenses.forEach(e => { if (e.dateISO) set.add(e.dateISO.slice(0,7)); });
+  state.incomes.forEach(e => { if (e.dateISO) set.add(e.dateISO.slice(0,7)); });
+  return Array.from(set).sort((a,b) => b.localeCompare(a));
+}
 const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
 /* ================= 永続化（localStorage） ================= */
@@ -317,6 +463,7 @@ function savePersisted() {
       members: state.members,
       splitExpenses: state.splitExpenses,
       goals: state.goals,
+      monthlyBudget: state.monthlyBudget,
     }));
   } catch (e) {}
 }
@@ -330,6 +477,19 @@ const state = {
   balanceInput: "",
 
   tab: "home",
+  viewMonth: currentYM(),
+  headerMenu: null, // null | "main" | "months" | "members" | "settings"
+  editingMember: null,
+  editingMemberValue: "",
+  memberEditError: null,
+  confirmDeleteMember: null,
+  darkMode: loadDarkMode(),
+  confirmReset: false,
+  notification: loadNotificationSettings(),
+  notificationPermissionDenied: false,
+  monthlyBudget: PERSISTED ? (PERSISTED.monthlyBudget || 0) : 0,
+  budgetForm: { value: "", error: null },
+
   expenses: IS_FIRST_VISIT ? [
     { id: uid(), amount: 850, category: "食費", memo: "学食（唐揚げ定食）", date: "7/24", dateISO: mockISO(7,24) },
     { id: uid(), amount: 220, category: "交通", memo: "バス", date: "7/25", dateISO: mockISO(7,25) },
@@ -337,14 +497,14 @@ const state = {
     { id: uid(), amount: 600, category: "日用品", memo: "シャンプー", date: "7/26", dateISO: mockISO(7,26) },
   ] : (PERSISTED ? PERSISTED.expenses : []),
   showExpForm: false,
-  expForm: { amount: "", category: "食費", memo: "" },
+  expForm: { amount: "", category: "食費", memo: "", error: null },
 
   incomes: IS_FIRST_VISIT ? [
     { id: uid(), amount: 32000, category: "バイト代", memo: "コンビニバイト", date: "7/20", dateISO: mockISO(7,20) },
     { id: uid(), amount: 50000, category: "仕送り", memo: "実家から", date: "7/1", dateISO: mockISO(7,1) },
   ] : (PERSISTED ? PERSISTED.incomes : []),
   showIncForm: false,
-  incForm: { amount: "", category: "バイト代", memo: "" },
+  incForm: { amount: "", category: "バイト代", memo: "", error: null },
 
   members: IS_FIRST_VISIT ? ["自分", "あかり", "けんと", "ゆい"] : (PERSISTED ? PERSISTED.members : ["自分"]),
   splitExpenses: IS_FIRST_VISIT ? [
@@ -352,16 +512,17 @@ const state = {
     { id: uid(), memo: "夜ご飯（焼肉）", amount: 9600, payer: "あかり", among: ["自分","あかり","けんと","ゆい"], deadline: "", paid: false },
   ] : (PERSISTED ? PERSISTED.splitExpenses : []),
   showSplitForm: false,
-  splitForm: { memo: "", amount: "", payer: "自分", among: IS_FIRST_VISIT ? ["自分","あかり","けんと","ゆい"] : (PERSISTED ? [...PERSISTED.members] : ["自分"]), deadline: "" },
+  splitForm: { memo: "", amount: "", payer: "自分", among: IS_FIRST_VISIT ? ["自分","あかり","けんと","ゆい"] : (PERSISTED ? [...PERSISTED.members] : ["自分"]), deadline: "", error: null },
 
   goals: IS_FIRST_VISIT ? [
     { id: uid(), name: "沖縄旅行", target: 60000, saved: 23000, deadline: "2026-09-01" },
     { id: uid(), name: "新しいノートPC", target: 120000, saved: 15000, deadline: "" },
   ] : (PERSISTED ? PERSISTED.goals : []),
   showGoalForm: false,
-  goalForm: { name: "", target: "", deadline: "" },
+  goalForm: { name: "", target: "", deadline: "", error: null },
   addSavingGoalId: null,
   addSavingAmount: "",
+  savingError: null,
 };
 
 /* ================= 集計ロジック ================= */
@@ -369,14 +530,37 @@ const state = {
 function totalExpense() { return state.expenses.reduce((s,e)=>s+e.amount,0); }
 function totalIncome() { return state.incomes.reduce((s,e)=>s+e.amount,0); }
 function walletBalance() { return totalIncome() - totalExpense() + state.openingBalance; }
-// 画面表示の「今月の支出／収入」には当月分のみを使う
-function thisMonthExpense() { return state.expenses.filter(e=>isThisMonth(e.dateISO)).reduce((s,e)=>s+e.amount,0); }
-function thisMonthIncome() { return state.incomes.filter(e=>isThisMonth(e.dateISO)).reduce((s,e)=>s+e.amount,0); }
+// 指定した年月の「月末時点」での所持金（過去の月を閲覧している時に使う）
+function walletBalanceAsOf(ym) {
+  const inc = state.incomes.filter(e=>!e.dateISO || e.dateISO.slice(0,7) <= ym).reduce((s,e)=>s+e.amount,0);
+  const exp = state.expenses.filter(e=>!e.dateISO || e.dateISO.slice(0,7) <= ym).reduce((s,e)=>s+e.amount,0);
+  return inc - exp + state.openingBalance;
+}
+// 画面表示の「今月の支出／収入」には、ヘッダーの月メニューで選んだ月の分だけを使う
+function thisMonthExpense() { return state.expenses.filter(e=>isViewMonth(e.dateISO)).reduce((s,e)=>s+e.amount,0); }
+function thisMonthIncome() { return state.incomes.filter(e=>isViewMonth(e.dateISO)).reduce((s,e)=>s+e.amount,0); }
 function categoryData() {
   return CATEGORIES.map(c => ({
     name: c.key, color: c.color,
-    value: state.expenses.filter(e=>e.category===c.key && isThisMonth(e.dateISO)).reduce((s,e)=>s+e.amount,0),
+    value: state.expenses.filter(e=>e.category===c.key && isViewMonth(e.dateISO)).reduce((s,e)=>s+e.amount,0),
   })).filter(c=>c.value>0);
+}
+// ヘッダーやカードの見出しに使う「今月」/「6月」などのラベル
+function monthAdjLabel() { return state.viewMonth===currentYM() ? "今月" : monthShortLabel(state.viewMonth); }
+function isHistoryMode() { return state.viewMonth !== currentYM(); }
+// メンバー名の変更を、メンバー一覧・既存の割り勘記録・入力中のフォームすべてに反映する
+function renameMemberEverywhere(oldName, newName) {
+  state.members = state.members.map(m => m===oldName ? newName : m);
+  state.splitExpenses.forEach(se => {
+    if (se.payer === oldName) se.payer = newName;
+    se.among = se.among.map(m => m===oldName ? newName : m);
+  });
+  if (state.splitForm.payer === oldName) state.splitForm.payer = newName;
+  state.splitForm.among = state.splitForm.among.map(m => m===oldName ? newName : m);
+}
+// 既存の割り勘記録（支払った人／割り勘した人のいずれか）で使われているメンバーかどうか
+function isMemberReferenced(name) {
+  return state.splitExpenses.some(se => se.payer === name || se.among.includes(name));
 }
 function balances() {
   const b = {};
@@ -454,7 +638,7 @@ function ledgerRow(e, deletable, action, isIncome) {
       <div class="meta">${esc(e.date||"")}${e.tag?` ・${esc(e.tag)}`:""}</div>
     </div>
     <div class="mono amt" style="${isIncome?"color:#2F9C8F;":""}">${isIncome?"+":""}${yen(e.amount)}</div>
-    ${deletable ? `<button class="trash-btn" data-action="${action}" data-id="${e.id}">${ICONS.trash(13,"#B0AA98")}</button>` : ""}
+    ${deletable ? `<button class="trash-btn" data-action="${action}" data-id="${e.id}">${ICONS.trash(13,"var(--text-faint)")}</button>` : ""}
   </div>`;
 }
 function splitRow(s) {
@@ -478,7 +662,7 @@ function splitRow(s) {
     </div>
     <div class="mono amt">${yen(s.amount)}</div>
     ${involvesSelf ? `<button class="pay-btn ${s.paid?"paid":""}" data-action="toggle-split-paid" data-id="${s.id}" data-value="${selfDelta}">${s.paid?"精算済み":"支払い済"}</button>` : ""}
-    <button class="trash-btn" data-action="delete-split" data-id="${s.id}">${ICONS.trash(13,"#B0AA98")}</button>
+    <button class="trash-btn" data-action="delete-split" data-id="${s.id}">${ICONS.trash(13,"var(--text-faint)")}</button>
   </div>`;
 }
 function deadlineInfo(deadline) {
@@ -489,7 +673,7 @@ function deadlineInfo(deadline) {
   const label = `${target.getFullYear()}/${target.getMonth()+1}/${target.getDate()}`;
   if (diffDays < 0) return { text: `期限切れ（${label}）`, color: "#B23A2E" };
   if (diffDays === 0) return { text: `今日が期限（${label}）`, color: "#B23A2E" };
-  return { text: `期限：${label}（あと${diffDays}日）`, color: "#9C9788" };
+  return { text: `期限：${label}（あと${diffDays}日）`, color: "var(--text-secondary)" };
 }
 function goalBar(g, compact, deletable) {
   const pct = Math.min(100, Math.round((g.saved/g.target)*100));
@@ -499,53 +683,91 @@ function goalBar(g, compact, deletable) {
   <div style="margin-bottom:${compact?"12px":"0"};">
     <button data-action="toggle-add-saving" data-id="${g.id}" style="all:unset;cursor:pointer;display:block;width:100%;box-sizing:border-box;">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;gap:6px;">
-        <span style="font-size:13.5px;font-weight:700;color:#1F2A37;">${esc(g.name)}</span>
-        <span class="mono" style="font-size:11.5px;color:#8A8577;margin-left:auto;">${yen(g.saved)} / ${yen(g.target)}</span>
+        <span style="font-size:13.5px;font-weight:700;color:var(--text-primary);">${esc(g.name)}</span>
+        <span class="mono" style="font-size:11.5px;color:var(--text-muted);margin-left:auto;">${yen(g.saved)} / ${yen(g.target)}</span>
       </div>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%;"></div></div>
       <div style="display:flex;justify-content:space-between;margin-top:3px;">
-        <span style="font-size:10.5px;color:#9C9788;">${pct}% 達成</span>
+        <span style="font-size:10.5px;color:var(--text-secondary);">${pct}% 達成</span>
         ${dl ? `<span style="font-size:10.5px;color:${dl.color};font-weight:${dl.color==="#B23A2E"?"700":"400"};">${esc(dl.text)}</span>` : ""}
       </div>
     </button>
-    ${deletable ? `<button class="trash-btn" style="margin-top:2px;" data-action="delete-goal" data-id="${g.id}">${ICONS.trash(12,"#B0AA98")}</button>` : ""}
+    ${deletable ? `<button class="trash-btn" style="margin-top:2px;" data-action="delete-goal" data-id="${g.id}">${ICONS.trash(12,"var(--text-faint)")}</button>` : ""}
 
     ${formOpen ? `
     <div class="form-card" style="margin-top:8px;padding:14px 14px 12px;">
-      <button class="close-btn" data-action="toggle-add-saving" data-id="${g.id}">${ICONS.x(14,"#8A8577")}</button>
+      <button class="close-btn" data-action="toggle-add-saving" data-id="${g.id}">${ICONS.x(14,"var(--text-muted)")}</button>
       <div class="field-label">貯金する金額</div>
       <div class="input-wrap">
         <span class="yen-mark">¥</span>
         <input class="input pl26 mono" inputmode="numeric" placeholder="0" value="${esc(state.addSavingAmount)}" data-bind="addSavingAmount" data-numeric="1" />
       </div>
-      <div style="font-size:11px;color:#8A8577;margin-top:6px;">現在の所持金：<span class="mono">${yenSigned(walletBalance())}</span></div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">現在の所持金：<span class="mono">${yenSigned(walletBalance())}</span></div>
+      ${state.savingError ? `<div class="field-error">${esc(state.savingError)}</div>` : ""}
       <button class="submit-btn" style="background:#2F9C8F;" data-action="submit-saving" data-id="${g.id}">所持金から貯金する</button>
     </div>` : ""}
   </div>`;
 }
 function emptyNote(text) { return `<div class="empty-note">${esc(text)}</div>`; }
+function historyBanner() {
+  return `
+  <div class="history-banner">
+    <span>${esc(monthLabel(state.viewMonth))}の記録を閲覧中です</span>
+    <button data-action="reset-month">今月に戻る</button>
+  </div>`;
+}
 
 /* ================= タブ: ホーム ================= */
+function renderBudgetCard() {
+  if (!state.monthlyBudget || state.monthlyBudget <= 0) {
+    return `
+    <div class="empty-note" style="margin-top:14px;cursor:pointer;" data-action="open-budget-menu">
+      月の予算はまだ設定されていません。右上のメニューの「予算設定」から設定できます。
+    </div>`;
+  }
+  const used = thisMonthExpense();
+  const budget = state.monthlyBudget;
+  const remaining = budget - used;
+  const pct = Math.max(0, Math.min(100, Math.round((used / budget) * 100)));
+  const over = remaining < 0;
+  return `
+  <div class="ledger-card" style="margin-top:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;">
+      <div class="ledger-label">${monthAdjLabel()}の予算</div>
+      <div class="mono" style="font-size:11.5px;color:var(--text-secondary);">${yen(used)} / ${yen(budget)}</div>
+    </div>
+    <div class="bar-track" style="margin-top:9px;">
+      <div class="bar-fill" style="width:${pct}%;${over?"background:#B23A2E;":""}"></div>
+    </div>
+    <div class="mono big-number" style="font-size:20px;margin-top:11px;color:${over?"#B23A2E":"#2F9C8F"};">
+      ${over ? `¥${Math.abs(remaining).toLocaleString()} 予算オーバー` : `あと ${yen(remaining)}`}
+    </div>
+  </div>`;
+}
 function renderHome() {
   const cats = categoryData();
   const setl = settlements();
+  const balAsOf = walletBalanceAsOf(state.viewMonth);
   return `
   <div class="tab-inner">
+    ${isHistoryMode() ? historyBanner() : ""}
     <div class="ledger-card">
       <div style="display:flex;gap:16px;">
         <div style="flex:1;">
-          <div class="ledger-label">今月の支出</div>
+          <div class="ledger-label">${monthAdjLabel()}の支出</div>
           <div class="mono big-number" style="font-size:22px;">${yen(thisMonthExpense())}</div>
         </div>
         <div style="flex:1;">
-          <div class="ledger-label">今月の収入</div>
+          <div class="ledger-label">${monthAdjLabel()}の収入</div>
           <div class="mono big-number" style="font-size:22px;">${yen(thisMonthIncome())}</div>
         </div>
       </div>
       <div class="perf-line"></div>
-      <div class="ledger-label">所持金</div>
-      <div class="mono big-number" style="font-size:22px;color:${walletBalance()<0?"#B23A2E":"#2F9C8F"};">${yenSigned(walletBalance())}</div>
+      <div class="ledger-label">所持金${isHistoryMode()?`（${monthShortLabel(state.viewMonth)}末時点）`:""}</div>
+      <div class="mono big-number" style="font-size:22px;color:${balAsOf<0?"#B23A2E":"#2F9C8F"};">${yenSigned(balAsOf)}</div>
     </div>
+
+    ${renderBudgetCard()}
 
     ${cats.length>0 ? `
     <div class="section">
@@ -556,8 +778,8 @@ function renderHome() {
           ${cats.map(c=>`
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
               <span style="width:8px;height:8px;border-radius:2px;background:${c.color};display:inline-block;"></span>
-              <span style="font-size:12.5px;color:#4A4638;flex:1;">${esc(c.name)}</span>
-              <span class="mono" style="font-size:12.5px;color:#1F2A37;">${yen(c.value)}</span>
+              <span style="font-size:12.5px;color:var(--text-primary);flex:1;">${esc(c.name)}</span>
+              <span class="mono" style="font-size:12.5px;color:var(--text-primary);">${yen(c.value)}</span>
             </div>`).join("")}
         </div>
       </div>
@@ -568,7 +790,7 @@ function renderHome() {
       <div class="section-title">精算が必要な割り勘</div>
       ${setl.map(s=>`
         <div class="settle-row">
-          <b>${esc(s.from)}</b> ${ICONS.arrow(14,"#8A8577")} <b>${esc(s.to)}</b>
+          <b>${esc(s.from)}</b> ${ICONS.arrow(14,"var(--text-muted)")} <b>${esc(s.to)}</b>
           <span class="mono settle-amt">${yen(s.amount)}</span>
         </div>`).join("")}
     </div>` : ""}
@@ -583,18 +805,24 @@ function renderHome() {
 
 /* ================= タブ: 支出 ================= */
 function renderExpense() {
+  const history = isHistoryMode();
+  const filtered = state.expenses.filter(e=>isViewMonth(e.dateISO));
   return `
   <div class="tab-inner">
+    ${history ? historyBanner() : ""}
     <div class="ledger-card">
-      <div class="ledger-label">今月の支出合計</div>
+      <div class="ledger-label">${monthAdjLabel()}の支出合計</div>
       <div class="mono big-number">${yen(thisMonthExpense())}</div>
     </div>
 
+    ${history ? `
+    <div class="empty-note" style="margin-top:14px;">過去の月を閲覧中は記帳を追加できません。「今月に戻る」から追加してください。</div>
+    ` : `
     <button class="add-button" data-action="toggle-exp-form">${ICONS.plus(16,"#F1EDDD")} 支出を記帳する</button>
 
     ${state.showExpForm ? `
     <div class="form-card">
-      <button class="close-btn" data-action="toggle-exp-form">${ICONS.x(15,"#8A8577")}</button>
+      <button class="close-btn" data-action="toggle-exp-form">${ICONS.x(15,"var(--text-muted)")}</button>
       <div class="field-label">金額</div>
       <div class="input-wrap">
         <span class="yen-mark">¥</span>
@@ -607,32 +835,40 @@ function renderExpense() {
         `).join("")}
       </div>
       <div class="field-label">メモ</div>
-      <input id="expMemo" class="input" placeholder="例）学食、コンビニ など" value="${esc(state.expForm.memo)}" data-bind="expForm.memo" />
+      <input id="expMemo" class="input" maxlength="30" placeholder="例）学食、コンビニ など" value="${esc(state.expForm.memo)}" data-bind="expForm.memo" />
+      ${state.expForm.error ? `<div class="field-error">${esc(state.expForm.error)}</div>` : ""}
       <button class="submit-btn" data-action="submit-expense">記帳する</button>
     </div>` : ""}
+    `}
 
     <div class="section">
-      <div class="section-title">記帳一覧</div>
-      ${state.expenses.map(e=>ledgerRow({...e, tag:e.category}, true, "delete-expense")).join("")}
-      ${state.expenses.length===0 ? emptyNote("まだ記帳がありません。") : ""}
+      <div class="section-title">${history?`${monthShortLabel(state.viewMonth)}の記帳一覧`:"記帳一覧"}</div>
+      ${filtered.map(e=>ledgerRow({...e, tag:e.category}, true, "delete-expense")).join("")}
+      ${filtered.length===0 ? emptyNote(state.expenses.length===0 ? "まだ記帳がありません。" : "この月の記帳はありません。") : ""}
     </div>
   </div>`;
 }
 
 /* ================= タブ: 収入 ================= */
 function renderIncome() {
+  const history = isHistoryMode();
+  const filtered = state.incomes.filter(e=>isViewMonth(e.dateISO));
   return `
   <div class="tab-inner">
+    ${history ? historyBanner() : ""}
     <div class="ledger-card">
-      <div class="ledger-label">今月の収入合計</div>
+      <div class="ledger-label">${monthAdjLabel()}の収入合計</div>
       <div class="mono big-number" style="color:#2F9C8F;">${yen(thisMonthIncome())}</div>
     </div>
 
+    ${history ? `
+    <div class="empty-note" style="margin-top:14px;">過去の月を閲覧中は記帳を追加できません。「今月に戻る」から追加してください。</div>
+    ` : `
     <button class="add-button" data-action="toggle-inc-form">${ICONS.plus(16,"#F1EDDD")} 収入を記帳する</button>
 
     ${state.showIncForm ? `
     <div class="form-card">
-      <button class="close-btn" data-action="toggle-inc-form">${ICONS.x(15,"#8A8577")}</button>
+      <button class="close-btn" data-action="toggle-inc-form">${ICONS.x(15,"var(--text-muted)")}</button>
       <div class="field-label">金額</div>
       <div class="input-wrap">
         <span class="yen-mark">¥</span>
@@ -645,14 +881,16 @@ function renderIncome() {
         `).join("")}
       </div>
       <div class="field-label">内容</div>
-      <input id="incMemo" class="input" placeholder="例）コンビニバイト、仕送り など" value="${esc(state.incForm.memo)}" data-bind="incForm.memo" />
+      <input id="incMemo" class="input" maxlength="30" placeholder="例）コンビニバイト、仕送り など" value="${esc(state.incForm.memo)}" data-bind="incForm.memo" />
+      ${state.incForm.error ? `<div class="field-error">${esc(state.incForm.error)}</div>` : ""}
       <button class="submit-btn" style="background:#2F9C8F;" data-action="submit-income">記帳する</button>
     </div>` : ""}
+    `}
 
     <div class="section">
-      <div class="section-title">記帳一覧</div>
-      ${state.incomes.map(e=>ledgerRow({...e, tag:e.category}, true, "delete-income", true)).join("")}
-      ${state.incomes.length===0 ? emptyNote("まだ記帳がありません。") : ""}
+      <div class="section-title">${history?`${monthShortLabel(state.viewMonth)}の記帳一覧`:"記帳一覧"}</div>
+      ${filtered.map(e=>ledgerRow({...e, tag:e.category}, true, "delete-income", true)).join("")}
+      ${filtered.length===0 ? emptyNote(state.incomes.length===0 ? "まだ記帳がありません。" : "この月の記帳はありません。") : ""}
     </div>
   </div>`;
 }
@@ -665,9 +903,9 @@ function renderSplit() {
 
     ${state.showSplitForm ? `
     <div class="form-card">
-      <button class="close-btn" data-action="toggle-split-form">${ICONS.x(15,"#8A8577")}</button>
+      <button class="close-btn" data-action="toggle-split-form">${ICONS.x(15,"var(--text-muted)")}</button>
       <div class="field-label">内容</div>
-      <input id="splitMemo" class="input" placeholder="例）宿代、夜ご飯 など" value="${esc(state.splitForm.memo)}" data-bind="splitForm.memo" />
+      <input id="splitMemo" class="input" maxlength="30" placeholder="例）宿代、夜ご飯 など" value="${esc(state.splitForm.memo)}" data-bind="splitForm.memo" />
       <div class="field-label">金額</div>
       <div class="input-wrap">
         <span class="yen-mark">¥</span>
@@ -680,7 +918,7 @@ function renderSplit() {
         ${state.members.map(m=>`<span class="member-tag">${esc(m)}</span>`).join("")}
       </div>
       <div style="margin-top:8px;display:flex;gap:6px;">
-        <input id="newMemberInput" class="input" placeholder="メンバーを追加" style="flex:1;" />
+        <input id="newMemberInput" class="input" maxlength="10" placeholder="メンバーを追加" style="flex:1;" />
         <button class="small-add-btn" data-action="add-member">${ICONS.plus(16,"#fff")}</button>
       </div>
       <div class="field-label">支払った人</div>
@@ -695,6 +933,7 @@ function renderSplit() {
           <button class="chip ${state.splitForm.among.includes(m)?"active":""}" style="${state.splitForm.among.includes(m)?"background:#2F9C8F;border-color:#2F9C8F;":""}" data-action="toggle-among" data-value="${esc(m)}">${esc(m)}</button>
         `).join("")}
       </div>
+      ${state.splitForm.error ? `<div class="field-error">${esc(state.splitForm.error)}</div>` : ""}
       <button class="submit-btn" data-action="submit-split">記帳する</button>
     </div>` : ""}
 
@@ -703,7 +942,7 @@ function renderSplit() {
       <div class="section-title">精算方法</div>
       ${settlements().map(s=>`
         <div class="settle-row">
-          <b>${esc(s.from)}</b> ${ICONS.arrow(14,"#8A8577")} <b>${esc(s.to)}</b>
+          <b>${esc(s.from)}</b> ${ICONS.arrow(14,"var(--text-muted)")} <b>${esc(s.to)}</b>
           <span class="mono settle-amt">${yen(s.amount)}</span>
         </div>`).join("")}
     </div>` : ""}
@@ -724,9 +963,9 @@ function renderGoal() {
 
     ${state.showGoalForm ? `
     <div class="form-card">
-      <button class="close-btn" data-action="toggle-goal-form">${ICONS.x(15,"#8A8577")}</button>
+      <button class="close-btn" data-action="toggle-goal-form">${ICONS.x(15,"var(--text-muted)")}</button>
       <div class="field-label">目標の名前</div>
-      <input id="goalName" class="input" placeholder="例）沖縄旅行、新しいカメラ" value="${esc(state.goalForm.name)}" data-bind="goalForm.name" />
+      <input id="goalName" class="input" maxlength="20" placeholder="例）沖縄旅行、新しいカメラ" value="${esc(state.goalForm.name)}" data-bind="goalForm.name" />
       <div class="field-label">目標金額</div>
       <div class="input-wrap">
         <span class="yen-mark">¥</span>
@@ -734,6 +973,7 @@ function renderGoal() {
       </div>
       <div class="field-label">期限（任意）</div>
       <input id="goalDeadline" type="date" class="input" value="${esc(state.goalForm.deadline)}" data-bind="goalForm.deadline" />
+      ${state.goalForm.error ? `<div class="field-error">${esc(state.goalForm.error)}</div>` : ""}
       <button class="submit-btn" data-action="submit-goal">目標をつくる</button>
     </div>` : ""}
 
@@ -761,7 +1001,7 @@ function renderTutorialScreen() {
     <div class="phone">
       <div class="onboard-screen">
         <button class="onboard-skip" data-action="skip-tutorial">スキップ</button>
-        <div class="onboard-icon">${ICONS[slide.icon](48,"#16324F")}</div>
+        <div class="onboard-icon">${ICONS[slide.icon](48,"var(--heading)")}</div>
         <div class="onboard-title mincho">${esc(slide.title)}</div>
         <div class="onboard-text">${esc(slide.text)}</div>
         <div class="onboard-dots">
@@ -777,7 +1017,7 @@ function renderBalanceScreen() {
   <div class="page">
     <div class="phone">
       <div class="onboard-screen">
-        <div class="onboard-icon">${ICONS.wallet(48,"#16324F")}</div>
+        <div class="onboard-icon">${ICONS.wallet(48,"var(--heading)")}</div>
         <div class="onboard-title mincho">今の所持金を教えてください</div>
         <div class="onboard-text">お財布や口座に今あるお金を入力すると、これからの収支管理の基準になります。</div>
         <div class="input-wrap" style="width:100%;max-width:220px;margin-top:20px;">
@@ -791,6 +1031,136 @@ function renderBalanceScreen() {
   </div>`;
 }
 
+function headerSubText() {
+  if (state.viewMonth === currentYM()) return TAB_TITLES[state.tab];
+  if (state.tab === "home") return `${monthLabel(state.viewMonth)}のまとめ`;
+  if (state.tab === "expense") return `${monthLabel(state.viewMonth)}の支出`;
+  if (state.tab === "income") return `${monthLabel(state.viewMonth)}の収入`;
+  return TAB_TITLES[state.tab];
+}
+function renderHeaderMenu() {
+  if (state.headerMenu === "months") return renderMonthsMenu();
+  if (state.headerMenu === "members") return renderMembersMenu();
+  if (state.headerMenu === "budget") return renderBudgetMenu();
+  if (state.headerMenu === "settings") return renderSettingsMenu();
+  return renderMainMenu();
+}
+function renderMainMenu() {
+  return `
+  <div class="month-menu">
+    <button class="month-menu-item" style="display:flex;align-items:center;gap:8px;" data-action="open-months-menu">${ICONS.calendar(15,"var(--heading)")}<span>過去の消費</span></button>
+    <button class="month-menu-item" style="display:flex;align-items:center;gap:8px;" data-action="open-members-menu">${ICONS.users(15,"var(--heading)")}<span>メンバー編集</span></button>
+    <button class="month-menu-item" style="display:flex;align-items:center;gap:8px;" data-action="open-budget-menu">${ICONS.target(15,"var(--heading)")}<span>予算設定</span></button>
+    <button class="month-menu-item" style="display:flex;align-items:center;gap:8px;" data-action="open-settings-menu">${ICONS.settings(15,"var(--heading)")}<span>設定</span></button>
+  </div>`;
+}
+function renderBudgetMenu() {
+  return `
+  <div class="month-menu member-menu">
+    <button class="menu-back" data-action="open-main-menu"><span style="display:inline-flex;transform:scaleX(-1);">${ICONS.arrow(12,"var(--text-muted)")}</span>戻る</button>
+    <div class="month-menu-label">月の予算</div>
+    <div style="padding:2px 8px 10px;">
+      <div class="input-wrap">
+        <span class="yen-mark">¥</span>
+        <input id="budgetInput" class="input pl26 mono" inputmode="numeric" placeholder="0" value="${esc(state.budgetForm.value)}" data-bind="budgetForm.value" data-numeric="1" />
+      </div>
+      ${state.budgetForm.error ? `<div class="field-error">${esc(state.budgetForm.error)}</div>` : ""}
+      <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.6;">毎月くり返し適用される支出の上限額です。ホーム画面に使用状況が表示されます。</div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        ${state.monthlyBudget>0 ? `<button class="mini-btn secondary" data-action="clear-budget">設定を解除</button>` : ""}
+        <button class="mini-btn primary" data-action="save-budget">保存する</button>
+      </div>
+    </div>
+  </div>`;
+}
+function renderSettingsMenu() {
+  return `
+  <div class="month-menu member-menu">
+    <button class="menu-back" data-action="open-main-menu"><span style="display:inline-flex;transform:scaleX(-1);">${ICONS.arrow(12,"var(--text-muted)")}</span>戻る</button>
+    <div class="month-menu-label">設定</div>
+
+    <div class="settings-row">
+      <span>ダークモード</span>
+      <button class="switch ${state.darkMode?"on":""}" data-action="toggle-dark-mode" aria-label="ダークモード切替">
+        <span class="switch-knob"></span>
+      </button>
+    </div>
+
+    <div class="settings-row">
+      <span>記帳リマインダー通知</span>
+      <button class="switch ${state.notification.enabled?"on":""}" data-action="toggle-notification" aria-label="通知切替">
+        <span class="switch-knob"></span>
+      </button>
+    </div>
+    ${state.notification.enabled ? `
+    <div class="settings-row" style="padding-top:0;">
+      <span>通知時刻</span>
+      <input type="time" class="input mono" style="width:112px;padding:6px 8px;font-size:12.5px;" value="${esc(state.notification.time)}" data-bind="notification.time" />
+    </div>
+    <div style="padding:0 10px 6px;font-size:11px;color:var(--text-muted);line-height:1.5;">毎日この時刻に、まだ記帳していない場合だけ通知します。</div>
+    ` : ""}
+    ${state.notificationPermissionDenied ? `<div class="field-error" style="padding:0 10px 6px;">通知が許可されていません。ブラウザまたは端末の通知設定をご確認ください。</div>` : ""}
+
+    <div class="settings-row settings-danger" ${state.confirmReset ? "" : 'data-action="open-reset-confirm" style="cursor:pointer;"'}>
+      <span>リセット（すべてのデータを削除）</span>
+      ${!state.confirmReset ? ICONS.trash(15,"#B23A2E") : ""}
+    </div>
+    ${state.confirmReset ? `
+    <div class="settings-confirm-box">
+      支出・収入・割り勘・貯金目標・メンバーなど、すべてのデータが削除されます。この操作は取り消せません。本当にリセットしますか？
+      <div class="settings-confirm-actions">
+        <button class="btn-cancel" data-action="cancel-reset">キャンセル</button>
+        <button class="btn-danger" data-action="confirm-reset">リセットする</button>
+      </div>
+    </div>` : ""}
+  </div>`;
+}
+function renderMonthsMenu() {
+  const months = availableMonths();
+  return `
+  <div class="month-menu">
+    <button class="menu-back" data-action="open-main-menu"><span style="display:inline-flex;transform:scaleX(-1);">${ICONS.arrow(12,"var(--text-muted)")}</span>戻る</button>
+    <div class="month-menu-label">過去の消費（月を選択）</div>
+    ${months.map(ym=>`
+      <button class="month-menu-item ${ym===state.viewMonth?"active":""}" data-action="select-month" data-value="${ym}">${esc(monthLabel(ym))}${ym===currentYM()?"（今月）":""}</button>
+    `).join("")}
+  </div>`;
+}
+function memberEditRow(name) {
+  const isSelf = name === "自分";
+  if (state.editingMember === name) {
+    return `
+    <div class="member-edit-row">
+      <input class="input mono" style="flex:1;padding:6px 8px;font-size:12.5px;" maxlength="10" value="${esc(state.editingMemberValue)}" data-bind="editingMemberValue" />
+      <button data-action="save-member-edit" data-value="${esc(name)}">${ICONS.check(14,"#2F9C8F")}</button>
+      <button data-action="cancel-member-edit">${ICONS.x(13,"var(--text-muted)")}</button>
+    </div>`;
+  }
+  return `
+  <div class="member-edit-row">
+    <span class="member-edit-name">${esc(name)}${isSelf?`<span class="member-edit-self">（あなた）</span>`:""}</span>
+    ${!isSelf ? `
+      <button data-action="start-member-edit" data-value="${esc(name)}">${ICONS.edit(13,"var(--text-muted)")}</button>
+      <button data-action="delete-member" data-value="${esc(name)}" class="${state.confirmDeleteMember===name?"confirm":""}">${state.confirmDeleteMember===name ? "削除？" : ICONS.trash(13,"var(--text-faint)")}</button>
+    ` : ""}
+  </div>`;
+}
+function renderMembersMenu() {
+  return `
+  <div class="month-menu member-menu">
+    <button class="menu-back" data-action="open-main-menu"><span style="display:inline-flex;transform:scaleX(-1);">${ICONS.arrow(12,"var(--text-muted)")}</span>戻る</button>
+    <div class="month-menu-label">メンバー編集</div>
+    <div class="member-edit-list">
+      ${state.members.map(m=>memberEditRow(m)).join("")}
+    </div>
+    <div class="member-edit-add">
+      <input id="menuNewMemberInput" class="input" maxlength="10" placeholder="メンバーを追加" style="flex:1;" />
+      <button class="small-add-btn" data-action="menu-add-member">${ICONS.plus(14,"#fff")}</button>
+    </div>
+    ${state.memberEditError ? `<div class="field-error">${esc(state.memberEditError)}</div>` : ""}
+  </div>`;
+}
+
 function renderApp() {
   if (state.onboarding.step === "tutorial") return renderTutorialScreen();
   if (state.onboarding.step === "balance") return renderBalanceScreen();
@@ -801,14 +1171,18 @@ function renderApp() {
       <div class="header">
         <div class="header-top">
           <span class="mincho brand">通帳plus</span>
-          <span class="header-sub">${TAB_TITLES[state.tab]}</span>
+          <div class="header-right">
+            <span class="header-sub">${headerSubText()}</span>
+            <button class="menu-btn" data-action="toggle-header-menu" aria-label="メニュー">${ICONS.menu(16,"#9FB4CC")}</button>
+          </div>
         </div>
+        ${state.headerMenu ? renderHeaderMenu() : ""}
       </div>
       <div class="content" id="contentArea">${tabHtml}</div>
       <div class="nav">
         ${["home","expense","income","split","goal"].map(t=>`
           <button class="nav-btn ${state.tab===t?"active":""}" data-action="set-tab" data-value="${t}">
-            ${ICONS[TAB_ICONS[t]](19, state.tab===t?"#16324F":"#B0AA98")}
+            ${ICONS[TAB_ICONS[t]](19, state.tab===t?"var(--heading)":"var(--text-faint)")}
             <span class="label">${TAB_LABELS[t]}</span>
             ${state.tab===t ? `<span class="nav-dot"></span>` : ""}
           </button>
@@ -820,6 +1194,7 @@ function renderApp() {
 }
 
 function render() {
+  document.body.classList.toggle("dark", !!state.darkMode);
   document.getElementById("app").innerHTML = renderApp();
   attachEvents();
   if (state.onboarding.step === "done") savePersisted();
@@ -846,6 +1221,9 @@ function attachEvents() {
         e.target.value = v;
       }
       setPath(state, el.dataset.bind, v);
+      if (el.dataset.bind && el.dataset.bind.indexOf("notification.") === 0) {
+        saveNotificationSettings();
+      }
     });
   });
   // クリック系
@@ -859,8 +1237,158 @@ function attachEvents() {
   });
 }
 
+const HEADER_MENU_ACTIONS = new Set([
+  "toggle-header-menu","open-months-menu","open-members-menu","open-main-menu","open-settings-menu",
+  "menu-add-member","start-member-edit","save-member-edit","cancel-member-edit","delete-member",
+  "toggle-dark-mode","open-reset-confirm","cancel-reset","toggle-notification",
+  "open-budget-menu","save-budget","clear-budget",
+]);
 function handleAction(action, value, id) {
+  // ヘッダーメニュー内の操作以外では、開いていれば自動的に閉じる
+  if (!HEADER_MENU_ACTIONS.has(action)) state.headerMenu = null;
+
   switch(action) {
+    case "toggle-header-menu":
+      state.headerMenu = state.headerMenu ? null : "main";
+      render(); break;
+    case "open-months-menu":
+      state.headerMenu = "months"; render(); break;
+    case "open-members-menu":
+      state.headerMenu = "members";
+      state.editingMember = null; state.editingMemberValue = "";
+      state.memberEditError = null; state.confirmDeleteMember = null;
+      render(); break;
+    case "open-main-menu":
+      state.headerMenu = "main";
+      state.editingMember = null; state.editingMemberValue = "";
+      state.memberEditError = null; state.confirmDeleteMember = null;
+      render(); break;
+    case "open-settings-menu":
+      state.headerMenu = "settings";
+      state.confirmReset = false;
+      render(); break;
+    case "open-budget-menu":
+      state.headerMenu = "budget";
+      state.budgetForm = { value: state.monthlyBudget>0 ? String(state.monthlyBudget) : "", error: null };
+      render(); break;
+    case "save-budget": {
+      const amt = parseFloat(state.budgetForm.value);
+      if (!amt || amt<=0) { state.budgetForm.error = "予算金額を入力してください（1円以上）"; render(); return; }
+      state.monthlyBudget = amt;
+      state.headerMenu = null;
+      render(); break;
+    }
+    case "clear-budget":
+      state.monthlyBudget = 0;
+      state.budgetForm = { value: "", error: null };
+      state.headerMenu = null;
+      render(); break;
+    case "toggle-dark-mode":
+      state.darkMode = !state.darkMode;
+      saveDarkMode(state.darkMode);
+      render(); break;
+    case "toggle-notification": {
+      if (state.notification.enabled) {
+        state.notification.enabled = false;
+        saveNotificationSettings();
+        render();
+        break;
+      }
+      if (!("Notification" in window)) {
+        state.notificationPermissionDenied = true;
+        render();
+        break;
+      }
+      if (Notification.permission === "granted") {
+        state.notification.enabled = true;
+        state.notificationPermissionDenied = false;
+        saveNotificationSettings();
+        render();
+      } else if (Notification.permission === "denied") {
+        state.notification.enabled = false;
+        state.notificationPermissionDenied = true;
+        render();
+      } else {
+        Notification.requestPermission().then((perm) => {
+          if (perm === "granted") {
+            state.notification.enabled = true;
+            state.notificationPermissionDenied = false;
+          } else {
+            state.notification.enabled = false;
+            state.notificationPermissionDenied = true;
+          }
+          saveNotificationSettings();
+          render();
+        });
+      }
+      break;
+    }
+    case "open-reset-confirm":
+      state.confirmReset = true; render(); break;
+    case "cancel-reset":
+      state.confirmReset = false; render(); break;
+    case "confirm-reset": {
+      // 家計データのみ削除する（ダークモードなどの表示設定は維持する）
+      try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+      try { localStorage.removeItem("tsuuchoplus_onboarded"); } catch (e) {}
+      location.reload();
+      return;
+    }
+    case "select-month":
+      state.viewMonth = value; state.headerMenu = null; render(); break;
+    case "reset-month":
+      state.viewMonth = currentYM(); state.headerMenu = null; render(); break;
+
+    case "menu-add-member": {
+      const input = document.getElementById("menuNewMemberInput");
+      const name = input.value.trim();
+      if (!name) { state.memberEditError = "メンバー名を入力してください"; render(); return; }
+      if (name.length > 10) { state.memberEditError = "メンバー名は10文字以内で入力してください"; render(); return; }
+      if (state.members.includes(name)) { state.memberEditError = "同じ名前のメンバーがすでにいます"; render(); return; }
+      state.members.push(name);
+      state.splitForm.among.push(name);
+      state.memberEditError = null;
+      render(); break;
+    }
+    case "start-member-edit":
+      state.editingMember = value;
+      state.editingMemberValue = value;
+      state.memberEditError = null;
+      state.confirmDeleteMember = null;
+      render(); break;
+    case "cancel-member-edit":
+      state.editingMember = null;
+      state.editingMemberValue = "";
+      state.memberEditError = null;
+      render(); break;
+    case "save-member-edit": {
+      const oldName = value;
+      const newName = state.editingMemberValue.trim();
+      if (!newName) { state.memberEditError = "メンバー名を入力してください"; render(); return; }
+      if (newName.length > 10) { state.memberEditError = "メンバー名は10文字以内で入力してください"; render(); return; }
+      if (newName !== oldName && state.members.includes(newName)) { state.memberEditError = "同じ名前のメンバーがすでにいます"; render(); return; }
+      renameMemberEverywhere(oldName, newName);
+      state.editingMember = null;
+      state.editingMemberValue = "";
+      state.memberEditError = null;
+      render(); break;
+    }
+    case "delete-member": {
+      const name = value;
+      if (name === "自分") { render(); return; }
+      if (state.confirmDeleteMember !== name) { state.confirmDeleteMember = name; render(); return; }
+      if (isMemberReferenced(name)) {
+        state.memberEditError = `「${name}」は割り勘の記録で使われているため削除できません`;
+        state.confirmDeleteMember = null;
+        render(); return;
+      }
+      state.members = state.members.filter(m => m !== name);
+      state.splitForm.among = state.splitForm.among.filter(m => m !== name);
+      if (state.splitForm.payer === name) state.splitForm.payer = "自分";
+      state.confirmDeleteMember = null;
+      render(); break;
+    }
+
     case "skip-tutorial":
     case "finish-tutorial":
       state.onboarding.step = "balance"; render(); break;
@@ -888,14 +1416,14 @@ function handleAction(action, value, id) {
       state.tab = value; render(); break;
 
     case "toggle-exp-form":
-      state.showExpForm = !state.showExpForm; render(); break;
+      state.showExpForm = !state.showExpForm; state.expForm.error = null; render(); break;
     case "select-exp-category":
       state.expForm.category = value; render(); break;
     case "submit-expense": {
       const amt = parseFloat(state.expForm.amount);
-      if (!amt || amt<=0) return;
+      if (!amt || amt<=0) { state.expForm.error = "金額を入力してください（1円以上）"; render(); return; }
       state.expenses.unshift({ id: uid(), amount: amt, category: state.expForm.category, memo: state.expForm.memo.trim()||"（メモなし）", date: todayStr(), dateISO: todayISO() });
-      state.expForm = { amount:"", category:"食費", memo:"" };
+      state.expForm = { amount:"", category:"食費", memo:"", error: null };
       state.showExpForm = false;
       render(); fireStamp();
       break;
@@ -904,14 +1432,14 @@ function handleAction(action, value, id) {
       state.expenses = state.expenses.filter(e=>e.id!==id); render(); break;
 
     case "toggle-inc-form":
-      state.showIncForm = !state.showIncForm; render(); break;
+      state.showIncForm = !state.showIncForm; state.incForm.error = null; render(); break;
     case "select-inc-category":
       state.incForm.category = value; render(); break;
     case "submit-income": {
       const amt = parseFloat(state.incForm.amount);
-      if (!amt || amt<=0) return;
+      if (!amt || amt<=0) { state.incForm.error = "金額を入力してください（1円以上）"; render(); return; }
       state.incomes.unshift({ id: uid(), amount: amt, category: state.incForm.category, memo: state.incForm.memo.trim()||"（メモなし）", date: todayStr(), dateISO: todayISO() });
-      state.incForm = { amount:"", category:"バイト代", memo:"" };
+      state.incForm = { amount:"", category:"バイト代", memo:"", error: null };
       state.showIncForm = false;
       render(); fireStamp();
       break;
@@ -920,7 +1448,7 @@ function handleAction(action, value, id) {
       state.incomes = state.incomes.filter(e=>e.id!==id); render(); break;
 
     case "toggle-split-form":
-      state.showSplitForm = !state.showSplitForm; render(); break;
+      state.showSplitForm = !state.showSplitForm; state.splitForm.error = null; render(); break;
     case "select-payer":
       state.splitForm.payer = value; render(); break;
     case "toggle-among": {
@@ -931,17 +1459,20 @@ function handleAction(action, value, id) {
     case "add-member": {
       const input = document.getElementById("newMemberInput");
       const name = input.value.trim();
-      if (!name || state.members.includes(name)) return;
+      if (!name) { state.splitForm.error = "メンバー名を入力してください"; render(); return; }
+      if (state.members.includes(name)) { state.splitForm.error = "同じ名前のメンバーがすでにいます"; render(); return; }
       state.members.push(name);
       state.splitForm.among.push(name);
+      state.splitForm.error = null;
       render();
       break;
     }
     case "submit-split": {
       const amt = parseFloat(state.splitForm.amount);
-      if (!amt || amt<=0 || state.splitForm.among.length===0) return;
+      if (!amt || amt<=0) { state.splitForm.error = "金額を入力してください（1円以上）"; render(); return; }
+      if (state.splitForm.among.length===0) { state.splitForm.error = "割り勘するメンバーを選択してください"; render(); return; }
       state.splitExpenses.unshift({ id: uid(), memo: state.splitForm.memo.trim()||"（メモなし）", amount: amt, payer: state.splitForm.payer, among: [...state.splitForm.among], deadline: state.splitForm.deadline, paid: false });
-      state.splitForm = { memo:"", amount:"", payer:"自分", among:[...state.members], deadline:"" };
+      state.splitForm = { memo:"", amount:"", payer:"自分", among:[...state.members], deadline:"", error: null };
       state.showSplitForm = false;
       render(); fireStamp();
       break;
@@ -986,34 +1517,37 @@ function handleAction(action, value, id) {
     }
 
     case "toggle-goal-form":
-      state.showGoalForm = !state.showGoalForm; render(); break;
+      state.showGoalForm = !state.showGoalForm; state.goalForm.error = null; render(); break;
     case "submit-goal": {
       const t = parseFloat(state.goalForm.target);
-      if (!state.goalForm.name.trim() || !t || t<=0) return;
+      if (!state.goalForm.name.trim()) { state.goalForm.error = "目標の名前を入力してください"; render(); return; }
+      if (!t || t<=0) { state.goalForm.error = "目標金額を入力してください（1円以上）"; render(); return; }
       state.goals.push({ id: uid(), name: state.goalForm.name.trim(), target: t, saved: 0, deadline: state.goalForm.deadline });
-      state.goalForm = { name:"", target:"", deadline:"" };
+      state.goalForm = { name:"", target:"", deadline:"", error: null };
       state.showGoalForm = false;
       render();
       break;
     }
     case "delete-goal":
       state.goals = state.goals.filter(g=>g.id!==id);
-      if (state.addSavingGoalId===id) { state.addSavingGoalId=null; state.addSavingAmount=""; }
+      if (state.addSavingGoalId===id) { state.addSavingGoalId=null; state.addSavingAmount=""; state.savingError=null; }
       render(); break;
 
     case "toggle-add-saving":
       state.addSavingGoalId = state.addSavingGoalId===id ? null : id;
       state.addSavingAmount = "";
+      state.savingError = null;
       render(); break;
     case "submit-saving": {
       const amt = parseFloat(state.addSavingAmount);
-      if (!amt || amt<=0) return;
+      if (!amt || amt<=0) { state.savingError = "貯金する金額を入力してください（1円以上）"; render(); return; }
       const g = state.goals.find(gg=>gg.id===id);
       if (!g) return;
       g.saved += amt;
       state.expenses.unshift({ id: uid(), amount: amt, category: "貯金", memo: `${g.name}に貯金`, date: todayStr(), dateISO: todayISO() });
       state.addSavingAmount = "";
       state.addSavingGoalId = null;
+      state.savingError = null;
       render(); fireStamp();
       break;
     }
@@ -1021,6 +1555,46 @@ function handleAction(action, value, id) {
 }
 
 render();
+
+/* ================= 記帳リマインダー通知 ================= */
+// アプリ内蔵のプッシュサーバーは無いため、アプリが開いている（または裏で少し動いている）間に
+// 設定時刻をチェックし、その日まだ記帳が無ければ「今日はまだ記帳していません」と通知する。
+const LAST_NOTIFIED_DATE_KEY = "tsuuchoplus_last_notified_date";
+function hasRecordedToday() {
+  const today = todayISO();
+  return state.expenses.some(e => e.dateISO === today) || state.incomes.some(e => e.dateISO === today);
+}
+function currentHHMM() {
+  const d = new Date();
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+function sendReminderNotification() {
+  const title = "通帳plus";
+  const options = { body: "今日はまだ記帳していません", icon: "./icons/icon-192.png", badge: "./icons/icon-192.png" };
+  if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+    navigator.serviceWorker.ready
+      .then((reg) => reg.showNotification(title, options))
+      .catch(() => { try { new Notification(title, options); } catch (e) {} });
+  } else {
+    try { new Notification(title, options); } catch (e) {}
+  }
+}
+function checkReminderNotification() {
+  if (!state.notification.enabled) return;
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  if (currentHHMM() !== state.notification.time) return;
+  const today = todayISO();
+  let lastNotified = null;
+  try { lastNotified = localStorage.getItem(LAST_NOTIFIED_DATE_KEY); } catch (e) {}
+  if (lastNotified === today) return;
+  try { localStorage.setItem(LAST_NOTIFIED_DATE_KEY, today); } catch (e) {}
+  if (hasRecordedToday()) return;
+  sendReminderNotification();
+}
+setInterval(checkReminderNotification, 30 * 1000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) checkReminderNotification();
+});
 
 /* ================= PWA: Service Worker登録 ================= */
 if ("serviceWorker" in navigator) {

@@ -32,6 +32,19 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// 通知タップ時：既に開いているタブがあればそこにフォーカス、無ければ新しく開く
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ("focus" in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow("./index.html");
+    })
+  );
+});
+
 // フェッチ時：キャッシュ優先。無ければネットワークに取りに行き、取れたものは次回用にキャッシュへ保存。
 // オフラインでページ遷移できない場合はキャッシュ済みのindex.htmlを返す。
 self.addEventListener("fetch", (event) => {
