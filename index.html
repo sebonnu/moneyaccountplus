@@ -233,6 +233,10 @@
   }
   .settle-row b { font-weight: 700; }
   .settle-amt { margin-left: auto; color: #B23A2E; font-weight: 700; }
+  .settle-toggle {
+    width: 100%; text-align: center; font-size: 12px; font-weight: 700; color: var(--heading);
+    padding: 8px 0 2px;
+  }
 
   .member-tag {
     font-size: 11.5px; background: var(--bg-active); color: var(--heading);
@@ -303,7 +307,7 @@
   }
   .nav-btn .label { font-size: 10px; margin-top: 2px; color: var(--text-faint); font-weight: 500; }
   .nav-btn.active .label { color: var(--heading); font-weight: 700; }
-  .nav-dot { position: absolute; bottom: -8px; width: 20px; height: 3px; border-radius: 3px; background: var(--heading); }
+  .nav-dot { position: absolute; top: -8px; width: 20px; height: 3px; border-radius: 3px; background: var(--heading); }
 
   .stamp-wrap {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -382,7 +386,7 @@ const TUTORIAL_SLIDES = [
   { icon: "income", title: "収入を記録", text: "バイト代や仕送りなど、入ってきたお金もかんたんに記録できます。" },
   { icon: "users", title: "割り勘・立て替え", text: "友達との立て替えを記録すると、誰が誰にいくら払えばいいか自動で計算。支払いが済んだら「支払い済」を押すだけで収支に反映されます。" },
   { icon: "piggy", title: "貯金目標", text: "欲しいものや旅行のために目標をつくって、所持金からコツコツ貯金できます。" },
-  { icon: "target", title: "予算を設定", text: "右上のメニューから「予算設定」を選ぶと、月の使いすぎを防ぐ予算を設定できます。" },
+  { icon: "target", title: "予算を設定", text: "月の使いすぎを防ぐ予算を決めておきましょう。このあとの案内ですぐに設定できます（右上のメニューからいつでも変更も可能です）。" },
   { icon: "bell", title: "記帳リマインダー通知", text: "右上のメニューの「設定」から通知をオンにすると、設定した時刻にまだ記帳していない日だけお知らせします。" },
 ];
 function hasSeenTutorial() {
@@ -413,6 +417,22 @@ function loadNotificationSettings() {
 }
 function saveNotificationSettings() {
   try { localStorage.setItem(NOTIFICATION_KEY, JSON.stringify(state.notification)); } catch (e) {}
+}
+// 貯金目標／立て替えの期限通知の設定（オン/オフ・何日前・時刻）
+const GOAL_NOTIFICATION_KEY = "tsuuchoplus_goal_notification";
+const SPLIT_NOTIFICATION_KEY = "tsuuchoplus_split_notification";
+function loadDeadlineNotificationSettings(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const p = JSON.parse(raw);
+      return { enabled: !!p.enabled, daysBefore: p.daysBefore || 3, time: p.time || "09:00" };
+    }
+  } catch (e) {}
+  return { enabled: false, daysBefore: 3, time: "09:00" };
+}
+function saveDeadlineNotificationSettings(key, obj) {
+  try { localStorage.setItem(key, JSON.stringify(obj)); } catch (e) {}
 }
 function clearMockData() {
   state.expenses = [];
@@ -507,6 +527,7 @@ const state = {
   onboarding: { step: IS_FIRST_VISIT ? "tutorial" : "done", tutorialIndex: 0 },
   openingBalance: PERSISTED ? (PERSISTED.openingBalance||0) : 0,
   balanceInput: "",
+  onboardingBudgetInput: "",
 
   tab: "home",
   viewMonth: currentYM(),
@@ -517,8 +538,12 @@ const state = {
   confirmDeleteMember: null,
   darkMode: loadDarkMode(),
   confirmReset: false,
+  showAllSettlements: false,
+  showAllSettlementsSplit: false,
   notification: loadNotificationSettings(),
   notificationPermissionDenied: false,
+  goalNotification: loadDeadlineNotificationSettings(GOAL_NOTIFICATION_KEY),
+  splitNotification: loadDeadlineNotificationSettings(SPLIT_NOTIFICATION_KEY),
   monthlyBudget: PERSISTED ? (PERSISTED.monthlyBudget || 0) : 0,
   budgetForm: { value: "", error: null },
 
@@ -623,6 +648,26 @@ function settlements() {
     if(creditors[j].val<1) j++;
   }
   return res;
+}
+// 自分が関わる精算だけを表示するためのフィルター（他の人同士のやりとりは表示しない）
+function mySettlements() {
+  return settlements().filter(s => s.from === "自分" || s.to === "自分");
+}
+// ホーム画面用：立て替え1件ごとに自分が関わる精算を列挙する（全員分を相殺してまとめる settlements() とは違い、
+// 追加した割り勘がすべて個別の行として表示される）
+function mySettlementDetails() {
+  const rows = [];
+  state.splitExpenses.filter(se=>!se.paid).forEach(se=>{
+    const share = se.amount/se.among.length;
+    if (se.payer === "自分") {
+      se.among.forEach(m=>{
+        if (m !== "自分") rows.push({ id: se.id+":"+m, from: m, to: "自分", amount: share, memo: se.memo });
+      });
+    } else if (se.among.includes("自分")) {
+      rows.push({ id: se.id, from: "自分", to: se.payer, amount: share, memo: se.memo });
+    }
+  });
+  return rows;
 }
 
 /* ================= ハンコ演出 ================= */
@@ -778,7 +823,7 @@ function renderBudgetCard() {
 }
 function renderHome() {
   const cats = categoryData();
-  const setl = settlements();
+  const setl = mySettlementDetails();
   const balAsOf = walletBalanceAsOf(state.viewMonth);
   return `
   <div class="tab-inner">
@@ -820,11 +865,16 @@ function renderHome() {
     ${setl.length>0 ? `
     <div class="section">
       <div class="section-title">精算が必要な割り勘</div>
-      ${setl.map(s=>`
-        <div class="settle-row">
+      ${(state.showAllSettlements ? setl : setl.slice(0,2)).map(s=>`
+        <div class="settle-row" style="flex-wrap:wrap;">
           <b>${esc(s.from)}</b> ${ICONS.arrow(14,"var(--text-muted)")} <b>${esc(s.to)}</b>
           <span class="mono settle-amt">${yen(s.amount)}</span>
+          <span style="flex-basis:100%;font-size:11px;color:var(--text-muted);">${esc(s.memo)}</span>
         </div>`).join("")}
+      ${setl.length>2 ? `
+      <button class="settle-toggle" data-action="toggle-settlements-expanded">
+        ${state.showAllSettlements ? "折りたたむ" : `すべて表示（${setl.length}件）`}
+      </button>` : ""}
     </div>` : ""}
 
     <div class="section">
@@ -969,20 +1019,25 @@ function renderSplit() {
       <button class="submit-btn" data-action="submit-split">記帳する</button>
     </div>` : ""}
 
-    ${settlements().length>0 ? `
+    ${mySettlementDetails().length>0 ? `
     <div class="section">
       <div class="section-title">精算方法</div>
-      ${settlements().map(s=>`
-        <div class="settle-row">
+      ${(state.showAllSettlementsSplit ? mySettlementDetails() : mySettlementDetails().slice(0,2)).map(s=>`
+        <div class="settle-row" style="flex-wrap:wrap;">
           <b>${esc(s.from)}</b> ${ICONS.arrow(14,"var(--text-muted)")} <b>${esc(s.to)}</b>
           <span class="mono settle-amt">${yen(s.amount)}</span>
+          <span style="flex-basis:100%;font-size:11px;color:var(--text-muted);">${esc(s.memo)}</span>
         </div>`).join("")}
+      ${mySettlementDetails().length>2 ? `
+      <button class="settle-toggle" data-action="toggle-settlements-expanded-split">
+        ${state.showAllSettlementsSplit ? "折りたたむ" : `すべて表示（${mySettlementDetails().length}件）`}
+      </button>` : ""}
     </div>` : ""}
 
     <div class="section">
       <div class="section-title">立て替え一覧</div>
-      ${state.splitExpenses.map(s=>splitRow(s)).join("")}
-      ${state.splitExpenses.length===0 ? emptyNote("まだ立て替えの記録がありません。") : ""}
+      ${state.splitExpenses.filter(s=>!s.paid).map(s=>splitRow(s)).join("")}
+      ${state.splitExpenses.filter(s=>!s.paid).length===0 ? emptyNote("まだ立て替えの記録がありません。") : ""}
     </div>
   </div>`;
 }
@@ -1056,8 +1111,26 @@ function renderBalanceScreen() {
           <span class="yen-mark">¥</span>
           <input class="input pl26 mono" style="text-align:right;font-size:16px;" inputmode="numeric" placeholder="0" value="${esc(state.balanceInput)}" data-bind="balanceInput" data-numeric="1" />
         </div>
-        <button class="submit-btn" style="max-width:260px;margin-top:20px;" data-action="finish-onboarding">はじめる</button>
+        <button class="submit-btn" style="max-width:260px;margin-top:20px;" data-action="submit-balance">次へ</button>
         <button class="onboard-later" data-action="skip-balance">あとで入力する</button>
+      </div>
+    </div>
+  </div>`;
+}
+function renderOnboardingBudgetScreen() {
+  return `
+  <div class="page">
+    <div class="phone">
+      <div class="onboard-screen">
+        <div class="onboard-icon">${ICONS.target(48,"var(--heading)")}</div>
+        <div class="onboard-title mincho">毎月の予算を設定しますか？</div>
+        <div class="onboard-text">使いすぎを防ぎたい月の支出上限を決めておくと、ホーム画面で使用状況をひと目で確認できます。あとからいつでも変更できます。</div>
+        <div class="input-wrap" style="width:100%;max-width:220px;margin-top:20px;">
+          <span class="yen-mark">¥</span>
+          <input class="input pl26 mono" style="text-align:right;font-size:16px;" inputmode="numeric" placeholder="例：30000" value="${esc(state.onboardingBudgetInput)}" data-bind="onboardingBudgetInput" data-numeric="1" />
+        </div>
+        <button class="submit-btn" style="max-width:260px;margin-top:20px;" data-action="finish-onboarding">設定してはじめる</button>
+        <button class="onboard-later" data-action="skip-onboarding-budget">あとで設定する</button>
       </div>
     </div>
   </div>`;
@@ -1141,6 +1214,44 @@ function renderSettingsMenuContent() {
     ` : ""}
     ${state.notificationPermissionDenied ? `<div class="field-error" style="padding:0 10px 6px;">通知が許可されていません。ブラウザまたは端末の通知設定をご確認ください。</div>` : ""}
 
+    <div class="settings-row">
+      <span>貯金目標の期限通知</span>
+      <button class="switch ${state.goalNotification.enabled?"on":""}" data-action="toggle-goal-notification" aria-label="貯金期限通知切替">
+        <span class="switch-knob"></span>
+      </button>
+    </div>
+    ${state.goalNotification.enabled ? `
+    <div class="settings-row" style="padding-top:0;gap:8px;">
+      <span>何日前に通知</span>
+      <input type="text" inputmode="numeric" class="input mono" style="width:56px;padding:8px 6px;font-size:13px;text-align:center;" value="${esc(String(state.goalNotification.daysBefore))}" data-bind="goalNotification.daysBefore" data-numeric="1" />
+      <span style="font-size:12px;color:var(--text-muted);">日前</span>
+    </div>
+    <div class="settings-row" style="padding-top:0;">
+      <span>通知時刻</span>
+      <input type="time" class="input mono" style="width:120px;padding:8px 10px;font-size:13px;" value="${esc(state.goalNotification.time)}" data-bind="goalNotification.time" />
+    </div>
+    <div style="padding:0 10px 6px;font-size:11px;color:var(--text-muted);line-height:1.5;">貯金目標の期限が近づくと「あと〇日で貯金の期限が来ます！！」と通知します。</div>
+    ` : ""}
+
+    <div class="settings-row">
+      <span>立て替えの期限通知</span>
+      <button class="switch ${state.splitNotification.enabled?"on":""}" data-action="toggle-split-notification" aria-label="立て替え期限通知切替">
+        <span class="switch-knob"></span>
+      </button>
+    </div>
+    ${state.splitNotification.enabled ? `
+    <div class="settings-row" style="padding-top:0;gap:8px;">
+      <span>何日前に通知</span>
+      <input type="text" inputmode="numeric" class="input mono" style="width:56px;padding:8px 6px;font-size:13px;text-align:center;" value="${esc(String(state.splitNotification.daysBefore))}" data-bind="splitNotification.daysBefore" data-numeric="1" />
+      <span style="font-size:12px;color:var(--text-muted);">日前</span>
+    </div>
+    <div class="settings-row" style="padding-top:0;">
+      <span>通知時刻</span>
+      <input type="time" class="input mono" style="width:120px;padding:8px 10px;font-size:13px;" value="${esc(state.splitNotification.time)}" data-bind="splitNotification.time" />
+    </div>
+    <div style="padding:0 10px 6px;font-size:11px;color:var(--text-muted);line-height:1.5;">立て替えの精算期限が近づくと「あと〇日で立て替えの期限が来ます！！」と通知します。</div>
+    ` : ""}
+
     <div class="settings-row settings-danger" ${state.confirmReset ? "" : 'data-action="open-reset-confirm" style="cursor:pointer;"'}>
       <span>リセット（すべてのデータを削除）</span>
       ${!state.confirmReset ? ICONS.trash(15,"#B23A2E") : ""}
@@ -1200,6 +1311,7 @@ function renderMenuFullScreen() {
 function renderApp() {
   if (state.onboarding.step === "tutorial") return renderTutorialScreen();
   if (state.onboarding.step === "balance") return renderBalanceScreen();
+  if (state.onboarding.step === "budget") return renderOnboardingBudgetScreen();
   if (state.headerMenu) return renderMenuFullScreen();
   const tabHtml = { home:renderHome, expense:renderExpense, income:renderIncome, split:renderSplit, goal:renderGoal }[state.tab]();
   return `
@@ -1260,6 +1372,12 @@ function attachEvents() {
       if (el.dataset.bind && el.dataset.bind.indexOf("notification.") === 0) {
         saveNotificationSettings();
       }
+      if (el.dataset.bind && el.dataset.bind.indexOf("goalNotification.") === 0) {
+        saveDeadlineNotificationSettings(GOAL_NOTIFICATION_KEY, state.goalNotification);
+      }
+      if (el.dataset.bind && el.dataset.bind.indexOf("splitNotification.") === 0) {
+        saveDeadlineNotificationSettings(SPLIT_NOTIFICATION_KEY, state.splitNotification);
+      }
     });
   });
   // クリック系
@@ -1277,8 +1395,46 @@ const HEADER_MENU_ACTIONS = new Set([
   "toggle-header-menu","open-months-menu","open-members-menu","open-main-menu","open-settings-menu","close-menu-full",
   "menu-add-member","start-member-edit","save-member-edit","cancel-member-edit","delete-member",
   "toggle-dark-mode","open-reset-confirm","cancel-reset","toggle-notification",
+  "toggle-goal-notification","toggle-split-notification",
   "open-budget-menu","save-budget","clear-budget",
 ]);
+// 貯金目標／立て替えの期限通知のオン・オフ切替（通知の許可リクエストも共通で行う）
+function toggleDeadlineNotification(kind, storageKey) {
+  const cfg = state[kind];
+  if (cfg.enabled) {
+    cfg.enabled = false;
+    saveDeadlineNotificationSettings(storageKey, cfg);
+    render();
+    return;
+  }
+  if (!("Notification" in window)) {
+    state.notificationPermissionDenied = true;
+    render();
+    return;
+  }
+  if (Notification.permission === "granted") {
+    cfg.enabled = true;
+    state.notificationPermissionDenied = false;
+    saveDeadlineNotificationSettings(storageKey, cfg);
+    render();
+  } else if (Notification.permission === "denied") {
+    cfg.enabled = false;
+    state.notificationPermissionDenied = true;
+    render();
+  } else {
+    Notification.requestPermission().then((perm) => {
+      if (perm === "granted") {
+        cfg.enabled = true;
+        state.notificationPermissionDenied = false;
+      } else {
+        cfg.enabled = false;
+        state.notificationPermissionDenied = true;
+      }
+      saveDeadlineNotificationSettings(storageKey, cfg);
+      render();
+    });
+  }
+}
 function handleAction(action, value, id) {
   // ヘッダーメニュー内の操作以外では、開いていれば自動的に閉じる
   if (!HEADER_MENU_ACTIONS.has(action)) state.headerMenu = null;
@@ -1322,6 +1478,12 @@ function handleAction(action, value, id) {
       state.budgetForm = { value: "", error: null };
       state.headerMenu = null;
       render(); break;
+    case "toggle-settlements-expanded":
+      state.showAllSettlements = !state.showAllSettlements;
+      render(); break;
+    case "toggle-settlements-expanded-split":
+      state.showAllSettlementsSplit = !state.showAllSettlementsSplit;
+      render(); break;
     case "toggle-dark-mode":
       state.darkMode = !state.darkMode;
       saveDarkMode(state.darkMode);
@@ -1362,6 +1524,12 @@ function handleAction(action, value, id) {
       }
       break;
     }
+    case "toggle-goal-notification":
+      toggleDeadlineNotification("goalNotification", GOAL_NOTIFICATION_KEY);
+      break;
+    case "toggle-split-notification":
+      toggleDeadlineNotification("splitNotification", SPLIT_NOTIFICATION_KEY);
+      break;
     case "open-reset-confirm":
       state.confirmReset = true; render(); break;
     case "cancel-reset":
@@ -1434,17 +1602,28 @@ function handleAction(action, value, id) {
     case "next-tutorial":
       state.onboarding.tutorialIndex = Math.min(state.onboarding.tutorialIndex+1, TUTORIAL_SLIDES.length-1);
       render(); break;
-    case "finish-onboarding": {
+    case "submit-balance": {
       const amt = parseFloat(state.balanceInput);
       state.openingBalance = (!isNaN(amt) && amt>0) ? amt : 0;
+      state.onboarding.step = "budget";
+      render(); break;
+    }
+    case "skip-balance":
+      state.openingBalance = 0;
+      state.onboarding.step = "budget";
+      render();
+      break;
+    case "finish-onboarding": {
+      const budgetAmt = parseFloat(state.onboardingBudgetInput);
+      state.monthlyBudget = (!isNaN(budgetAmt) && budgetAmt>0) ? budgetAmt : 0;
       state.onboarding.step = "done";
       clearMockData();
       markTutorialSeen();
       render(); fireStamp();
       break;
     }
-    case "skip-balance":
-      state.openingBalance = 0;
+    case "skip-onboarding-budget":
+      state.monthlyBudget = 0;
       state.onboarding.step = "done";
       clearMockData();
       markTutorialSeen();
@@ -1609,7 +1788,7 @@ function currentHHMM() {
 }
 function sendReminderNotification() {
   const title = "通帳plus";
-  const options = { body: "今日はまだ記帳していません", icon: "./icons/icon-192.png", badge: "./icons/icon-192.png" };
+  const options = { body: "今日はまだ記帳していません！", icon: "./icons/icon-192.png", badge: "./icons/icon-192.png" };
   if (navigator.serviceWorker && navigator.serviceWorker.ready) {
     navigator.serviceWorker.ready
       .then((reg) => reg.showNotification(title, options))
@@ -1630,9 +1809,77 @@ function checkReminderNotification() {
   if (hasRecordedToday()) return;
   sendReminderNotification();
 }
-setInterval(checkReminderNotification, 30 * 1000);
+
+/* ================= 貯金目標・立て替えの期限通知 ================= */
+// 期限のN日前になったら1日1回だけ通知する（同じ項目に何度も通知しないよう、通知済みの日付をitemごとに記録する）
+const DEADLINE_LAST_NOTIFIED_KEY = "tsuuchoplus_deadline_last_notified";
+function getDeadlineLastNotifiedMap() {
+  try { return JSON.parse(localStorage.getItem(DEADLINE_LAST_NOTIFIED_KEY) || "{}"); } catch (e) { return {}; }
+}
+function setDeadlineLastNotified(key, dateISO) {
+  const map = getDeadlineLastNotifiedMap();
+  map[key] = dateISO;
+  try { localStorage.setItem(DEADLINE_LAST_NOTIFIED_KEY, JSON.stringify(map)); } catch (e) {}
+}
+function daysUntil(deadline) {
+  if (!deadline) return null;
+  const target = new Date(deadline + "T00:00:00");
+  const today = new Date(); today.setHours(0,0,0,0);
+  return Math.round((target - today) / (24*60*60*1000));
+}
+function sendDeadlineNotification(title, body) {
+  const options = { body, icon: "./icons/icon-192.png", badge: "./icons/icon-192.png" };
+  if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+    navigator.serviceWorker.ready
+      .then((reg) => reg.showNotification(title, options))
+      .catch(() => { try { new Notification(title, options); } catch (e) {} });
+  } else {
+    try { new Notification(title, options); } catch (e) {}
+  }
+}
+function checkGoalDeadlineNotifications() {
+  const cfg = state.goalNotification;
+  if (!cfg.enabled) return;
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  if (currentHHMM() !== cfg.time) return;
+  const today = todayISO();
+  const map = getDeadlineLastNotifiedMap();
+  state.goals.forEach((g) => {
+    if (!g.deadline || g.saved >= g.target) return;
+    const d = daysUntil(g.deadline);
+    if (d !== Number(cfg.daysBefore)) return;
+    const key = "goal:" + g.id;
+    if (map[key] === today) return;
+    sendDeadlineNotification(`貯金目標「${g.name}」`, `あと${d}日で貯金の期限が来ます！！`);
+    setDeadlineLastNotified(key, today);
+  });
+}
+function checkSplitDeadlineNotifications() {
+  const cfg = state.splitNotification;
+  if (!cfg.enabled) return;
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  if (currentHHMM() !== cfg.time) return;
+  const today = todayISO();
+  const map = getDeadlineLastNotifiedMap();
+  state.splitExpenses.forEach((s) => {
+    if (s.paid || !s.deadline) return;
+    if (!(s.payer === "自分" || s.among.includes("自分"))) return;
+    const d = daysUntil(s.deadline);
+    if (d !== Number(cfg.daysBefore)) return;
+    const key = "split:" + s.id;
+    if (map[key] === today) return;
+    sendDeadlineNotification(`立て替え「${s.memo}」`, `あと${d}日で立て替えの期限が来ます！！`);
+    setDeadlineLastNotified(key, today);
+  });
+}
+function checkAllNotifications() {
+  checkReminderNotification();
+  checkGoalDeadlineNotifications();
+  checkSplitDeadlineNotifications();
+}
+setInterval(checkAllNotifications, 30 * 1000);
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) checkReminderNotification();
+  if (!document.hidden) checkAllNotifications();
 });
 
 /* ================= PWA: Service Worker登録 ================= */
