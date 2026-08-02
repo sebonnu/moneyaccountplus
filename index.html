@@ -446,7 +446,7 @@ function clearMockData() {
   state.members = ["自分"];
   state.splitExpenses = [];
   state.showSplitForm = false;
-  state.splitForm = { memo: "", amount: "", payer: "自分", among: ["自分"], deadline: "", error: null };
+  state.splitForm = { memo: "", amount: "", payer: "自分", among: ["自分"], deadline: "", mode: "members", headcount: "", error: null };
 
   state.goals = [];
   state.showGoalForm = false;
@@ -569,7 +569,7 @@ const state = {
     { id: uid(), memo: "夜ご飯（焼肉）", amount: 9600, payer: "あかり", among: ["自分","あかり","けんと","ゆい"], deadline: "", paid: false },
   ] : (PERSISTED ? PERSISTED.splitExpenses : []),
   showSplitForm: false,
-  splitForm: { memo: "", amount: "", payer: "自分", among: IS_FIRST_VISIT ? ["自分","あかり","けんと","ゆい"] : (PERSISTED ? [...PERSISTED.members] : ["自分"]), deadline: "", error: null },
+  splitForm: { memo: "", amount: "", payer: "自分", among: IS_FIRST_VISIT ? ["自分","あかり","けんと","ゆい"] : (PERSISTED ? [...PERSISTED.members] : ["自分"]), deadline: "", mode: "members", headcount: "", error: null },
 
   goals: IS_FIRST_VISIT ? [
     { id: uid(), name: "沖縄旅行", target: 60000, saved: 23000, deadline: "2026-09-01" },
@@ -737,7 +737,10 @@ function splitRow(s) {
         ${s.paid ? " ・支払い済み" : ""}
       </div>
     </div>
-    <div class="mono amt">${yen(s.amount)}</div>
+    <div class="mono amt" style="text-align:right;">
+      ${yen(s.amount)}
+      <div style="font-size:10px;color:var(--text-muted);font-weight:500;">一人 ${yen(s.amount/s.among.length)}</div>
+    </div>
     ${involvesSelf ? `<button class="pay-btn ${s.paid?"paid":""}" data-action="toggle-split-paid" data-id="${s.id}" data-value="${selfDelta}">${s.paid?"精算済み":"支払い済"}</button>` : ""}
     <button class="trash-btn" data-action="delete-split" data-id="${s.id}">${ICONS.trash(13,"var(--text-faint)")}</button>
   </div>`;
@@ -995,6 +998,18 @@ function renderSplit() {
       </div>
       <div class="field-label">精算期限（任意）</div>
       <input id="splitDeadline" type="date" class="input" value="${esc(state.splitForm.deadline)}" data-bind="splitForm.deadline" />
+
+      <div class="field-label">割り勘の方法</div>
+      <div class="chip-row">
+        <button class="chip ${state.splitForm.mode==="members"?"active":""}" style="${state.splitForm.mode==="members"?"background:#16324F;border-color:#16324F;":""}" data-action="set-split-mode" data-value="members">メンバーで指定</button>
+        <button class="chip ${state.splitForm.mode==="headcount"?"active":""}" style="${state.splitForm.mode==="headcount"?"background:#16324F;border-color:#16324F;":""}" data-action="set-split-mode" data-value="headcount">人数で指定</button>
+      </div>
+
+      ${state.splitForm.mode==="headcount" ? `
+      <div class="field-label">人数（支払った人を含む合計）</div>
+      <input id="splitHeadcount" class="input mono" inputmode="numeric" placeholder="例：10" value="${esc(state.splitForm.headcount)}" data-bind="splitForm.headcount" data-numeric="1" />
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;line-height:1.5;">メンバーを一人ずつ選ばず、人数だけで均等に割り勘できます。</div>
+      ` : `
       <div class="field-label">メンバー</div>
       <div class="chip-row">
         ${state.members.map(m=>`<span class="member-tag">${esc(m)}</span>`).join("")}
@@ -1003,18 +1018,24 @@ function renderSplit() {
         <input id="newMemberInput" class="input" maxlength="10" placeholder="メンバーを追加" style="flex:1;" />
         <button class="small-add-btn" data-action="add-member">${ICONS.plus(16,"#fff")}</button>
       </div>
+      `}
+
       <div class="field-label">支払った人</div>
       <div class="chip-row">
         ${state.members.map(m=>`
           <button class="chip ${state.splitForm.payer===m?"active":""}" style="${state.splitForm.payer===m?"background:#16324F;border-color:#16324F;":""}" data-action="select-payer" data-value="${esc(m)}">${esc(m)}</button>
         `).join("")}
       </div>
+
+      ${state.splitForm.mode==="members" ? `
       <div class="field-label">割り勘する人</div>
       <div class="chip-row">
         ${state.members.map(m=>`
           <button class="chip ${state.splitForm.among.includes(m)?"active":""}" style="${state.splitForm.among.includes(m)?"background:#2F9C8F;border-color:#2F9C8F;":""}" data-action="toggle-among" data-value="${esc(m)}">${esc(m)}</button>
         `).join("")}
       </div>
+      ` : ""}
+
       ${state.splitForm.error ? `<div class="field-error">${esc(state.splitForm.error)}</div>` : ""}
       <button class="submit-btn" data-action="submit-split">記帳する</button>
     </div>` : ""}
@@ -1667,6 +1688,10 @@ function handleAction(action, value, id) {
 
     case "toggle-split-form":
       state.showSplitForm = !state.showSplitForm; state.splitForm.error = null; render(); break;
+    case "set-split-mode":
+      state.splitForm.mode = value;
+      state.splitForm.error = null;
+      render(); break;
     case "select-payer":
       state.splitForm.payer = value; render(); break;
     case "toggle-among": {
@@ -1688,9 +1713,19 @@ function handleAction(action, value, id) {
     case "submit-split": {
       const amt = parseFloat(state.splitForm.amount);
       if (!amt || amt<=0) { state.splitForm.error = "金額を入力してください（1円以上）"; render(); return; }
-      if (state.splitForm.among.length===0) { state.splitForm.error = "割り勘するメンバーを選択してください"; render(); return; }
-      state.splitExpenses.unshift({ id: uid(), memo: state.splitForm.memo.trim()||"（メモなし）", amount: amt, payer: state.splitForm.payer, among: [...state.splitForm.among], deadline: state.splitForm.deadline, paid: false });
-      state.splitForm = { memo:"", amount:"", payer:"自分", among:[...state.members], deadline:"", error: null };
+      let among;
+      if (state.splitForm.mode === "headcount") {
+        const n = parseInt(state.splitForm.headcount, 10);
+        if (!n || n<1) { state.splitForm.error = "人数を入力してください（1人以上）"; render(); return; }
+        // 支払った人＋人数分の匿名の参加者、として記録する（名前を1人ずつ入力しなくてよいように）
+        among = [state.splitForm.payer];
+        for (let i=1;i<n;i++) among.push(`参加者${i}`);
+      } else {
+        if (state.splitForm.among.length===0) { state.splitForm.error = "割り勘するメンバーを選択してください"; render(); return; }
+        among = [...state.splitForm.among];
+      }
+      state.splitExpenses.unshift({ id: uid(), memo: state.splitForm.memo.trim()||"（メモなし）", amount: amt, payer: state.splitForm.payer, among, deadline: state.splitForm.deadline, paid: false });
+      state.splitForm = { memo:"", amount:"", payer:"自分", among:[...state.members], deadline:"", mode:"members", headcount:"", error: null };
       state.showSplitForm = false;
       render(); fireStamp();
       break;
